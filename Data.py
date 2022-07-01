@@ -9,8 +9,8 @@ File_Name = 'Data/data_map10/creditcard1_train.csv'
 File_Upset = 'Part_Data/Data_Upset.csv'
 # 分割后训练集路径
 File_Train = 'Part_Data/Data_Trian.csv'
-# 分割后检测集路径
-File_Check = 'Data_Check/Data_Check.csv'
+# 分割后测试集路径
+File_Check = 'Data_Check/Data_Test.csv'
 # 训练集比例
 Train_Set = 0.8
 User_w = ['0.01']
