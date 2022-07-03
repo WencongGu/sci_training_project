@@ -29,7 +29,7 @@ if __name__ == '__main__':
         ave_f1 = 0
         ave_roc_auc = 0
         for k in range(users):
-            client_file = 'Part_Data/Data_Trian' + str(k + 1) + '.csv'
+            client_file = 'Part_Data/Data_Trian_' + str(k + 1) + '.csv'
             client_g_h = XGBoost_train.client_train(client_file, ave_gi, ave_hi, i)
             # 得到gi和hi以及其余评估值
             client_hi.append(client_g_h[1])
@@ -41,10 +41,12 @@ if __name__ == '__main__':
         ave_hi = 0
         for j in range(len(client_gi)):
             ave_gi += client_gi[j]
+        for j in range(len(client_hi)):
             ave_hi += client_hi[j]
-            ave_f1 += f1_score[j]
+        for j in range(len(roc_auc)):
+            # ave_f1 += f1_score[j]
             ave_roc_auc += roc_auc[j]
-        print("F1 score is: {}".format(ave_f1))
+        # print("F1 score is: {}".format(ave_f1))
         print("AUC Score is: {}".format(ave_roc_auc))
         ave_hi = ave_hi / len(client_hi)
         ave_gi = ave_gi / len(client_gi)
