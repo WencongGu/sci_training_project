@@ -18,16 +18,21 @@ if __name__ == '__main__':
 
     # 客户端训练
     users = Data.num_user
-    sum_gain = []
+    client_gi = []
+    client_hi = []
+    ave_gi = 0
+    ave_hi = 0
     # 100轮联合更新
     for i in range(100):
         for k in range(users):
             client_file = 'Part_Data/Data_Trian' + str(k + 1) + '.csv'
-            sum_gain.append(XGBoost_train.client_train(client_file))
-        # 计算最大信息增益
-        max_gain = 0
-        max_client = 0
-        for j in len(sum_gain):
-            if sum_gain[j] > max_gain:
-                max_gain = sum_gain[j]
-                max_client = j
+            client_g_h = XGBoost_train.client_train(client_file, ave_gi, ave_hi, i)
+            # 得到gi和hi
+            client_hi.append(client_g_h[1])
+            client_gi.append(client_g_h[0])
+        # 计算平均的gi和hi
+        for j in range(len(client_gi)):
+            ave_gi += client_gi[j]
+            ave_hi += client_hi[j]
+        ave_hi = ave_hi / len(client_hi)
+        ave_gi = ave_gi / len(client_gi)

@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 
-class XGB:
+class FED_XGB:
 
     def __init__(self,
                  base_score=0.5,
@@ -60,7 +60,6 @@ class XGB:
                 # min_child_weight在这里起作用，指的是每个叶子节点上的H，即目标函数二阶导的加和
                 # 当目标函数为linear，即1/2*(y-y_hat)**2时，它的二阶导是1，那min_child_weight就等价于min_child_sample
                 # 当目标函数为logistic，其二阶导为sigmoid(y_hat)*(1-sigmoid(y_hat))，可理解为叶子节点的纯度，更详尽的解释可参看：
-                # https://stats.stackexchange.com/questions/317073/explanation-of-min-child-weight-in-xgboost-algorithm#
                 if self.min_child_weight:
                     if (H_left < self.min_child_weight) | (H_right < self.min_child_weight):
                         continue
@@ -123,7 +122,7 @@ class XGB:
         else:
             raise KeyError('objective must be linear or logistic!')
 
-    def fit(self, X: pd.DataFrame, Y):
+    def fit(self, X: pd.DataFrame, Y, gi, hi,round):
         '''
         根据训练数据集X和Y训练出树结构和权重
         '''
@@ -137,9 +136,12 @@ class XGB:
         y_hat = np.array([self.base_score] * Y.shape[0])
         for t in range(self.n_estimators):
             print('fitting tree {}...'.format(t + 1))
-
-            X['g'] = self._grad(y_hat, Y)
-            X['h'] = self._hess(y_hat, Y)
+            if round == 0:
+                X['g'] = self._grad(y_hat, Y)
+                X['h'] = self._hess(y_hat, Y)
+            else:
+                X['g'] = gi
+                X['h'] = hi
 
             f_t = pd.Series([0] * Y.shape[0])
             self.tree_structure[t + 1] = self.xgb_cart_tree(X, f_t, 1)
@@ -149,6 +151,7 @@ class XGB:
             print('tree {} fit done!'.format(t + 1))
 
         print(self.tree_structure)
+        return y_hat
 
     def _get_tree_node_w(self, X, tree, w):
         '''
