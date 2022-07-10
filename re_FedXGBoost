@@ -5,7 +5,7 @@ import sympy
 
 class FED_XGB:
     def __init__(self, base_score=0.5, max_depth=5, n_estimators=10, learning_rate=0.1, reg_lambda=1.,
-                 gamma=0., min_child_sample=None, min_child_weight=1., objective='linear'):
+                 gamma=0.1, min_child_sample=10, min_child_weight=0.00001, objective='linear'):
         self.base_score = base_score  # 最开始时给叶子节点权重所赋的值，默认0.5，迭代次数够多的话，结果对这个初值不敏感
         self.max_depth = max_depth  # 最大数深度，3
         self.n_estimators = n_estimators  # 树的个数，10
@@ -16,10 +16,10 @@ class FED_XGB:
         self.min_child_weight = min_child_weight  # 每个叶子节点的Hessian矩阵和，下面代码会细讲
         self.objective = objective  # 目标函数
         self.tree_structure = {}  # 用一个字典来存储每一颗树的树结构
-        self.epsilon = 0.01  # 树生长最小增益
+        self.epsilon = 0.00001  # 树生长最小增益
         self.loss = lambda y, y_hat: (y - y_hat) ** 2. / 2.  # 损失函数
 
-    def xgb_cart_tree(self, X, w, dep):
+    def xgb_cart_tree(self, X, w, dep=0):
         """
         递归构造XCart树
         @param X:
@@ -32,7 +32,7 @@ class FED_XGB:
         max_gain = 0.  # 这里增益的初值一定要设置为0，相当于对树做剪枝，即如果算出的增益小于0则不做分裂
         G_left_best, G_right_best, H_left_best, H_right_best = 0., 0., 0., 0.
         # 遍历每个变量的每个切点，寻找分裂增益gain最大的切点并记录下来
-        for item in [x for x in X.columns if x not in ['g', 'h', 'y']]:
+        for item in [x for x in X.columns if x not in ['g', 'h', 'y', 'Amount', 'Class']]:
             for cut in X[item]:
                 if self.min_child_sample:  # 这里如果指定了min_child_sample则限制分裂后叶子节点的样本数都不能小于指定值
                     if (X.loc[X[item] < cut].shape[0] < self.min_child_sample) \
@@ -40,22 +40,21 @@ class FED_XGB:
                         continue
                 list_L = X.loc[X[item] < cut].index.tolist()
                 list_R = X.loc[X[item] >= cut].index.tolist()
-                G_left = w[list_L].sum() - X.loc[list_L, 'g'].sum()
-                G_right = w[list_R].sum() - X.loc[list_R, 'g'].sum()
+                G_left = X.loc[list_L, 'g'].sum()
+                G_right = X.loc[list_R, 'g'].sum()
                 H_left = len(list_L)
                 H_right = len(list_R)
                 """!待完善：根据损失函数计算"""
                 # min_child_weight指每个叶子节点上的H，即目标函数二阶导的加和
-                if self.min_child_weight and ((H_left < self.min_child_weight) or (H_right < self.min_child_weight)):
-                    continue
+                # if self.min_child_weight and ((H_left < self.min_child_weight) or (H_right < self.min_child_weight)):
+                #     continue
                 gain = G_left ** 2. / (H_left + self.reg_lambda) + G_right ** 2. / (H_right + self.reg_lambda)
                 gain = gain - (G_left + G_right) ** 2. / (H_left + H_right + self.reg_lambda)
                 gain = gain / 2. - self.gamma
-                if gain > 0.:
-                    if gain > max_gain:
-                        best_var, best_cut = item, cut
-                        max_gain = gain
-                        G_left_best, G_right_best, H_left_best, H_right_best = G_left, G_right, H_left, H_right
+                if gain > max_gain:
+                    best_var, best_cut = item, cut
+                    max_gain = gain
+                    G_left_best, G_right_best, H_left_best, H_right_best = G_left, G_right, H_left, H_right
         # 如果遍历完找不到可分列的点，或达到最大深度，或最大增益小于指定值，则返回None。否则递归生成树结构的字典，保存在self.tree_structure中
         if best_var is None or dep > self.max_depth or max_gain <= self.epsilon:
             return None
@@ -66,11 +65,10 @@ class FED_XGB:
             w_right = - G_right_best / (H_right_best + self.reg_lambda)
             w[id_left] = w_left
             w[id_right] = w_right
-            self.tree_structure[(best_var, best_cut)] = {}
-            self.tree_structure[(best_var, best_cut)][('left', w_left)] = self.xgb_cart_tree(X.loc[id_left], w, dep + 1)
-            self.tree_structure[(best_var, best_cut)][('right', w_right)] = self.xgb_cart_tree(X.loc[id_right], w,
-                                                                                               dep + 1)
-            return self.tree_structure
+            tree = {(best_var, best_cut): {}}
+            tree[(best_var, best_cut)][('left', w_left)] = self.xgb_cart_tree(X.loc[id_left], w, dep + 1)
+            tree[(best_var, best_cut)][('right', w_right)] = self.xgb_cart_tree(X.loc[id_right], w, dep + 1)
+        return tree
 
     def fit(self, X, Y, gi, hi, r):
         """
@@ -97,12 +95,12 @@ class FED_XGB:
                 X['g'] = gi
                 X['h'] = hi
             f_t = pd.Series([0.] * Y.shape[0])
-            self.tree_structure[t + 1] = self.xgb_cart_tree(X, f_t, 0)
+            self.tree_structure[t] = self.xgb_cart_tree(X, f_t)
             y_hat = y_hat + self.rate * f_t
             # python中函数传参时传的是引用，所以这里f_t作为参数调用了xbg_cart_tree后其本身也得到更新
             print(f'tree {t + 1} fitted.')
         print('All fitted.')
-        return self.tree_structure
+        return y_hat
 
     def _get_tree_node_w(self, X, tree, w):
         """
@@ -129,7 +127,7 @@ class FED_XGB:
                     w[id_right] = kk[1]
                 和下面的代码等价，节省计算资源
             '''
-            kk = tree[k].keys()
+            kk = list(tree[k].keys())
             tree_left = tree[k][kk[0]]
             w[id_left] = kk[0][1]
             tree_right = tree[k][kk[1]]
@@ -144,11 +142,10 @@ class FED_XGB:
         @param X:
         @return:
         """
-        l_tree = list(self.tree_structure.items())
         X = X.reset_index(drop=True)
         Y = pd.Series([self.base_score] * X.shape[0])
         for t in range(self.n_estimators):
-            tree = dict([l_tree[t]])
+            tree = self.tree_structure[t]
             y_t = pd.Series([0.] * X.shape[0])
             self._get_tree_node_w(X, tree, y_t)
             Y = Y + self.rate * y_t
@@ -197,7 +194,7 @@ class FED_XGB:
             G = y_hat[list_L_R].sum() - y[list_L_R].sum()
             H = len(list_L_R)
         elif self.loss == 'logistic':
-            pass  # 待后续补充
+            pass  # 后续补充
         else:
             pass
         return G, H
