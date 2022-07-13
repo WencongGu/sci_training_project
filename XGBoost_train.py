@@ -1,11 +1,12 @@
 import xgboost as xgb
 import pandas as pd
+import numpy as np
 from sklearn.metrics import f1_score, roc_auc_score
 from sklearn.feature_extraction.text import TfidfTransformer
 from xgboost import XGBClassifier
 import Fed_XGBboost
-from Fed_XGBboost import FED_XGB
-import Data
+from re_FedXGBoost import FED_XGB
+import data_set
 import numpy
 import csv
 
@@ -31,7 +32,7 @@ def client_train(File_Name, gi, hi, round):
     X_test = te[te.columns[:-1].tolist()]
     y_test = te[te.columns[-1]]
     y_pred = FML.predict_raw(X_test)
-    y_pred_proba = FML.predict_prob(X_test)
+    y_pred_proba = 1./(1.+np.exp(-X_test))
     f1_pred = calculate_f1(y_pred, y_test)
     # 返回一阶导和二阶导、f1的值、roc
     return [FML._grad(client_y_hat, y_train), FML._hess(client_y_hat, y_train), f1_pred,

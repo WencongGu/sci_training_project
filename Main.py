@@ -2,15 +2,15 @@
 import numpy as np
 import pandas
 
-import Data
+import data_set
 import Data_Part
 import Data_Upset
 import T_C_Part
 import XGBoost_train
 
 if __name__ == '__main__':
-    csv_path_p = Data.File_Upset
-    csv_path = Data.File_Train
+    csv_path_p = data_set.File_Upset
+    csv_path = data_set.File_Train
     save_dir = 'Part_Data'
     # 执行打乱操作
     Data_Upset.get_label_data()
@@ -20,13 +20,13 @@ if __name__ == '__main__':
     Data_Part.PyCSV().split_csv(csv_path, save_dir)
     
     # 客户端训练
-    users = Data.num_user
+    users = data_set.num_user
     client_gi = []
     client_hi = []
     ave_gi = None
     ave_hi = None
     # 100轮联合更新
-    for i in range(200):
+    for i in range(5):
         f1_score = []
         roc_auc = []
         ave_f1 = 0
@@ -63,3 +63,5 @@ if __name__ == '__main__':
         print(f"AUC Score is: {ave_roc_auc}")
         ave_hi = ave_hi / len(client_hi)
         ave_gi = ave_gi / len(client_gi)
+        print(ave_gi)
+        print(ave_hi)

@@ -1,4 +1,4 @@
-import Data
+import data_set
 import Data_Load
 import pandas as pd
 import os
@@ -69,9 +69,9 @@ class PyCSV:
         # 获取数据行数
         self.line_numbers = 0
         # 获取数据行数
-        self.total = sum(1 for line in open(Data.File_Train))
+        self.total = sum(1 for line in open(data_set.File_Train))
         # 确定每个文件所有的行数
-        self.partline = (int)(self.total / Data.num_user + 1)
+        self.partline = (int)(self.total / data_set.num_user + 1)
         # print(self.total / Data.num_user)
         # 切分后文件的后缀
         i = 0

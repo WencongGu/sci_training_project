@@ -1,5 +1,5 @@
 # 该文件用于拆分训练集和测试集
-import Data
+import data_set
 import csv
 import os
 import pandas as pd
@@ -11,18 +11,18 @@ class Tc_Part:
 
     def split_csv(self, path):
         # 如果train.csv和check.csv存在就删除
-        if os.path.exists(Data.File_Train):
-            os.remove(Data.File_Train)
-        if os.path.exists(Data.File_Check):
-            os.remove(Data.File_Check)
+        if os.path.exists(data_set.File_Train):
+            os.remove(data_set.File_Train)
+        if os.path.exists(data_set.File_Check):
+            os.remove(data_set.File_Check)
 
         with open(path, 'r', newline='') as file:
             csvreader = csv.reader(file)
             i = 0
             # 获取原文件行数
-            self.total = sum(1 for line in open(Data.File_Name))
+            self.total = sum(1 for line in open(data_set.File_Name))
             # 获取训练集行数
-            self.partline = (int)(self.total * Data.Train_Set)
+            self.partline = (int)(self.total * data_set.Train_Set)
             self.encoding = 'utf-8'
             self.line_numbers = 0
             # print(self.total)
@@ -37,9 +37,9 @@ class Tc_Part:
                 self.line_numbers += df.shape[0]
                 # 设置切分后文件的保存路径
                 if(i == 1):
-                    save_filename = os.path.join(Data.File_Train)
+                    save_filename = os.path.join(data_set.File_Train)
                 else:
-                    save_filename = os.path.join(Data.File_Check)
+                    save_filename = os.path.join(data_set.File_Check)
                 # 打印保存信息
                 print(f"{save_filename} 已经生成！")
                 # 保存切分后的数据
