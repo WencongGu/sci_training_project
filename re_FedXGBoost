@@ -18,6 +18,10 @@ class FED_XGB:
         self.tree_structure = {}  # 用一个字典来存储每一颗树的树结构
         self.epsilon = 0.00001  # 树生长最小增益
         self.loss = lambda y, y_hat: (y - y_hat) ** 2. / 2.  # 损失函数
+        self.epsilon0 = 0.85  # 主成分分析贡献率
+        self.m = 28  # 训练集特征个数
+        self.k = 0  # 主成分个数
+        self.mat = None  # 主成分分析中线性变换的矩阵的前k列
 
     def xgb_cart_tree(self, X, w, dep=0):
         """
@@ -27,12 +31,11 @@ class FED_XGB:
         @param dep:
         @return:
         """
-        X = X.reset_index(drop='True')
         best_var, best_cut = None, None
         max_gain = 0.  # 这里增益的初值一定要设置为0，相当于对树做剪枝，即如果算出的增益小于0则不做分裂
         G_left_best, G_right_best, H_left_best, H_right_best = 0., 0., 0., 0.
         # 遍历每个变量的每个切点，寻找分裂增益gain最大的切点并记录下来
-        for item in [x for x in X.columns if x not in ['g', 'h', 'y', 'Amount', 'Class']]:
+        for item in range(self.k):
             for cut in X[item]:
                 if self.min_child_sample:  # 这里如果指定了min_child_sample则限制分裂后叶子节点的样本数都不能小于指定值
                     if (X.loc[X[item] < cut].shape[0] < self.min_child_sample) \
@@ -83,19 +86,21 @@ class FED_XGB:
         if X.shape[0] != Y.shape[0]:
             raise ValueError('X and Y must have the same length!')
         X = X.reset_index(drop=True)
+        self.pca_mat(X)
+        Z = self.pca(X)
         Y = Y.values
         # 这里根据base_score参数设定权重初始值
         y_hat = pd.Series([self.base_score] * Y.shape[0])
         for t in range(self.n_estimators):
             print(f'fitting tree {t + 1}.')
             if r == 0:
-                X['g'] = self.diff(y_hat, Y)[0]
-                X['h'] = self.diff(y_hat, Y)[1]
+                Z['g'] = self.diff(y_hat, Y)[0]
+                Z['h'] = self.diff(y_hat, Y)[1]
             else:
-                X['g'] = gi
-                X['h'] = hi
+                Z['g'] = gi
+                Z['h'] = hi
             f_t = pd.Series([0.] * Y.shape[0])
-            self.tree_structure[t] = self.xgb_cart_tree(X, f_t)
+            self.tree_structure[t] = self.xgb_cart_tree(Z, f_t)
             y_hat = y_hat + self.rate * f_t
             # python中函数传参时传的是引用，所以这里f_t作为参数调用了xbg_cart_tree后其本身也得到更新
             print(f'tree {t + 1} fitted.')
@@ -143,11 +148,12 @@ class FED_XGB:
         @return:
         """
         X = X.reset_index(drop=True)
-        Y = pd.Series([self.base_score] * X.shape[0])
+        Z = self.pca(X)
+        Y = pd.Series([self.base_score] * Z.shape[0])
         for t in range(self.n_estimators):
             tree = self.tree_structure[t]
-            y_t = pd.Series([0.] * X.shape[0])
-            self._get_tree_node_w(X, tree, y_t)
+            y_t = pd.Series([0.] * Z.shape[0])
+            self._get_tree_node_w(Z, tree, y_t)
             Y = Y + self.rate * y_t
         return Y
 
@@ -217,3 +223,41 @@ class FED_XGB:
             g.append(d1f.subs(m, y[i]).subs(n, y_hat[i]))
             h.append(d2f.subs(m, y[i]).subs(n, y_hat[i]))  # 可以优化，避免for循环直接对y和y_hat全部带入导数求值
         return g, h
+
+    def pca(self, data):
+        """
+        主成分分析，用以提高程序运行速度。
+        :param data: 数据集
+        :return: 原数据变为k个主成分列，k个主成分列命名为数字0~k-1，它们的方差贡献率为self.epsilon0
+        """
+        tran_data = data.transpose()
+        br = np.array(tran_data)
+        for i in range(self.k):
+            data[i] = list(np.dot(self.mat[i, :], br))
+        data = data.loc[:, list(range(self.k))]
+        return data
+
+    def pca_mat(self, data):
+        data = data.iloc[:, :self.m]
+        tran_data = data.transpose()
+        ar = np.array(data)
+        br = np.array(tran_data)
+        S = np.dot(br, ar)
+        S = S / (ar.shape[0] - 1)
+        eigval, eigvect = np.linalg.eig(S)
+        p = []
+        for i in range(eigvect.shape[0]):
+            p.append(list(eigvect[i, :]))
+            p[i].append(eigval[i])
+        p.sort(key=lambda x: x[len(eigvect)], reverse=True)
+        at = eigval.sum()
+        sum_ = 0
+        for i in range(len(eigval)):
+            sum_ += p[i][len(eigval)]
+            if sum_ >= self.epsilon0 * at:
+                self.k = i + 1
+                break
+        for i in range(eigvect.shape[0]):
+            p[i].pop()
+        self.mat = np.array(p[0:self.k])
+        return self.mat
