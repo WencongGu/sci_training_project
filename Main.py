@@ -25,7 +25,7 @@ if __name__ == '__main__':
     client_hi = []
     ave_gi = None
     ave_hi = None
-    # 100轮联合更新
+    # 200轮联合更新
     for i in range(5):
         f1_score = []
         roc_auc = []
@@ -56,11 +56,11 @@ if __name__ == '__main__':
         for index, value in enumerate(ave_hi):
             for client_hi_value in client_hi:
                 ave_hi[index] += client_hi_value[index]
-        for j in roc_auc:
+        # for j in roc_auc:
             # ave_f1 += f1_score[j]
-            ave_roc_auc += j
+            # ave_roc_auc += j
         # print("F1 score is: {}".format(ave_f1))
-        print(f"AUC Score is: {ave_roc_auc}")
+        # print(f"AUC Score is: {ave_roc_auc}")
         ave_hi = ave_hi / len(client_hi)
         ave_gi = ave_gi / len(client_gi)
         print(ave_gi)
