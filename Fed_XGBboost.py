@@ -579,7 +579,8 @@ class FED_XGB:
 
         Y = self.predict_raw(X)
         sigmoid = lambda x: 1 / (1 + np.exp(-x))
-        Y = Y.apply(sigmoid)
+        np.float32(sigmoid(np.float32(Y))).astype(str)
+        # Y = Y.apply(sigmoid)
 
         return Y
 
@@ -592,7 +593,9 @@ class FED_XGB:
         @return:
         """
         if self.objective == 'logistic':
-            y_hat = 1.0 / (1.0 + np.exp(-y_hat))
+            # y_hat = 1.0 / (1.0 + np.exp(-y_hat))
+            sigmoid = lambda x: 1 / (1 + np.exp(-x))
+            np.float32(sigmoid(np.float32(y_hat))).astype(str)
             return y_hat - Y
         elif self.objective == 'linear':
             return y_hat - Y
