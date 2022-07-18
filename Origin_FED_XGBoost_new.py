@@ -26,7 +26,7 @@ class FED_XGB:
         self.min_child_weight = min_child_weight  # 每个叶子节点的Hessian矩阵和，下面代码会细讲
         self.objective = objective  # 目标函数，可选linear和logistic
         self.tree_structure = {}  # 用一个字典来存储每一颗树的树结构
-        self.dependence = 0.3
+        self.dependence = 0.3  # 自己发明的，用于联邦学习，客户端依赖系数
 
     def xgb_cart_tree(self, X, w, m_dpth):
         '''
@@ -145,7 +145,7 @@ class FED_XGB:
             else:
                 X['g'] = self._grad(y_hat, Y)
                 X['h'] = self._hess(y_hat, Y)
-                for i in range(int(self.dependence*min(len(X['g']), len(gi)))):
+                for i in range(int(self.dependence * min(len(X['g']), len(gi)))):
                     X['g'][i] = gi[i]
                     X['h'][i] = hi[i]
 
