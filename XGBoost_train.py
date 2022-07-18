@@ -22,18 +22,19 @@ def client_train(File_Name, gi, hi, round):
     X_train = df[df.columns[:-1].tolist()]
     y_train = df[df.columns[-1]]
     FML = FED_XGB(learning_rate=0.1,
-                  n_estimators=1  # 总共迭代次数，每进行一轮进行一次全局更新
+                  n_estimators=5  # 总共迭代次数，每进行一轮进行一次全局更新
                   , max_depth=4, min_child_weight=0.2, gamma=0.03,
-                  objective = 'logistic')
+                  objective='logistic')
     # 得到y_hat
-    client_y_hat = FML.fit(X_train, y_train, gi, hi, round)
+    client = FML.fit(X_train, y_train, gi, hi, round)
+    client_y_hat = client[0]
     # test
     te = pd.read_csv('Data_Check/Data_Test.csv')
     X_test = te[te.columns[:-1].tolist()]
     y_test = te[te.columns[-1]]
     y_pred = FML.predict_raw(X_test)
     # y_pred_proba = 1./(1.+np.exp(-X_test))
-    y_pred_proba=FML.predict_prob(X_test)
+    y_pred_proba = FML.predict_prob(X_test)
     f1_pred = calculate_f1(y_pred, y_test)
     # 返回一阶导和二阶导、f1的值、roc
     return [FML._grad(client_y_hat, y_train), FML._hess(client_y_hat, y_train), f1_pred,

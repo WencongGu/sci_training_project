@@ -18,7 +18,7 @@ if __name__ == '__main__':
     T_C_Part.Tc_Part().split_csv(csv_path_p)
     # 将训练集平均分配给各用户机
     Data_Part.PyCSV().split_csv(csv_path, save_dir)
-    
+
     # 客户端训练
     users = data_set.num_user
     client_gi = []
@@ -46,7 +46,7 @@ if __name__ == '__main__':
             assert type(client_g_h[0]) == pandas.Series
             assert type(client_g_h[1]) == pandas.Series
             assert type(client_g_h[2]) == list
-        
+
         # 计算平均的gi和hi
         ave_gi = pandas.Series(np.zeros(shape=(gi_single_len,)))
         ave_hi = pandas.Series(np.zeros(shape=(hi_single_len,)))
@@ -57,11 +57,13 @@ if __name__ == '__main__':
             for client_hi_value in client_hi:
                 ave_hi[index] += client_hi_value[index]
         # for j in roc_auc:
-            # ave_f1 += f1_score[j]
-            # ave_roc_auc += j
+        # ave_f1 += f1_score[j]
+        # ave_roc_auc += j
         # print("F1 score is: {}".format(ave_f1))
         # print(f"AUC Score is: {ave_roc_auc}")
         ave_hi = ave_hi / len(client_hi)
         ave_gi = ave_gi / len(client_gi)
+        ave_gi = np.array(ave_gi)
+        ave_hi = np.array(ave_hi)
         print(ave_gi)
         print(ave_hi)

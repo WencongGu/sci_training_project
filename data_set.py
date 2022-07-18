@@ -2,7 +2,7 @@
 # 数据参数维度数
 num_item = 29
 # 客户端数量（需要数据分割的份数）
-num_user = 50
+num_user = 10
 # 进行数据提取的文件路径
 File_Name = 'Data/data_map10/creditcard1_train.csv'
 # 少数类样本名称
