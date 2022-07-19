@@ -14,7 +14,7 @@ import csv
 def calculate_f1(y, t):
     y_result = [1. if i > 0.5 else 0. for i in y]
     print('f1score for client =', f1_score(t, y_result))
-    return y_result
+    return f1_score(t, y_result)
 
 
 def client_train(File_Name, gi, hi, round):
@@ -37,6 +37,6 @@ def client_train(File_Name, gi, hi, round):
     y_pred_proba = FML.predict_prob(X_test)
     f1_pred = calculate_f1(y_pred, y_test)
     # 返回一阶导和二阶导、f1的值、roc
-    return [FML._grad(client_y_hat, y_train), FML._hess(client_y_hat, y_train), f1_pred,
+    return [client[1], client[2], f1_pred,
             roc_auc_score(y_test, y_pred_proba)]
     # FML.save_model('model/clFML-mode.model')

@@ -26,7 +26,11 @@ class FED_XGB:
         self.min_child_weight = min_child_weight  # 每个叶子节点的Hessian矩阵和，下面代码会细讲
         self.objective = objective  # 目标函数，可选linear和logistic
         self.tree_structure = {}  # 用一个字典来存储每一颗树的树结构
-        self.dependence = 0.3
+        self.dependence = 0.3  # 客户端依赖系数（自己发明的）
+        self.epsilon0 = 0.85  # 主成分分析贡献率
+        self.m = 29  # 训练集特征个数
+        self.k = 0  # 主成分个数
+        self.mat = None  # 主成分分析中线性变换的矩阵的前k列
 
     def xgb_cart_tree(self, X, w, m_dpth):
         '''
@@ -131,9 +135,9 @@ class FED_XGB:
 
         if X.shape[0] != Y.shape[0]:
             raise ValueError('X and Y must have the same length!')
-        cl_gi = 0
-        cl_hi = 0
         X = X.reset_index(drop='True')
+        # self.pca_mat(X)
+        # X = self.pca(X)
         Y = Y.values
         # 这里根据base_score参数设定权重初始值
         y_hat = np.array([self.base_score] * Y.shape[0])
@@ -145,7 +149,7 @@ class FED_XGB:
             else:
                 X['g'] = self._grad(y_hat, Y)
                 X['h'] = self._hess(y_hat, Y)
-                for i in range(int(self.dependence*min(len(X['g']), len(gi)))):
+                for i in range(int(self.dependence * min(len(X['g']), len(gi)))):
                     X['g'][i] = gi[i]
                     X['h'][i] = hi[i]
 
@@ -189,6 +193,7 @@ class FED_XGB:
         '''
 
         X = X.reset_index(drop='True')
+        # X = self.pca(X)
         Y = pd.Series([self.base_score] * X.shape[0])
 
         for t in range(self.n_estimators):
@@ -209,6 +214,47 @@ class FED_XGB:
         Y = Y.apply(sigmoid)
 
         return Y
+
+    def pca(self, data):
+
+        """
+        主成分分析，用以提高程序运行速度。
+        :param data: 数据集
+        :return: 原数据变为k个主成分列，k个主成分列命名为数字0~k-1，它们的方差贡献率为self.epsilon0
+        """
+
+        # data = data.iloc[:, self.m]
+        train_data = data.transpose()
+        br = np.array(train_data)
+        for i in range(self.k):
+            data[i] = list(np.dot(self.mat[i, :], br))
+        data = data.loc[:, list(range(self.k))]
+        return data
+
+    def pca_mat(self, data):
+        data = data.iloc[:, :self.m]
+        tran_data = data.transpose()
+        ar = np.array(data)
+        br = np.array(tran_data)
+        S = np.dot(br, ar)
+        S = S / (ar.shape[0] - 1)
+        eigval, eigvect = np.linalg.eig(S)
+        p = []
+        for i in range(eigvect.shape[0]):
+            p.append(list(eigvect[i, :]))
+            p[i].append(eigval[i])
+        p.sort(key=lambda x: x[len(eigvect)], reverse=True)
+        at = eigval.sum()
+        sum_ = 0
+        for i in range(len(eigval)):
+            sum_ += p[i][len(eigval)]
+            if sum_ >= self.epsilon0 * at:
+                self.k = i + 1
+                break
+        for i in range(eigvect.shape[0]):
+            p[i].pop()
+        self.mat = np.array(p[0:self.k])
+        return self.mat
 
 
 # class FED_XGB:

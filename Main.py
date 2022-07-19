@@ -29,7 +29,7 @@ if __name__ == '__main__':
     for i in range(5):
         f1_score = []
         roc_auc = []
-        ave_f1 = 0
+        ave_f1 = 0.00
         ave_roc_auc = 0
         hi_single_len = 0
         gi_single_len = 0
@@ -45,7 +45,7 @@ if __name__ == '__main__':
             roc_auc.append(client_g_h[3])
             assert type(client_g_h[0]) == pandas.Series
             assert type(client_g_h[1]) == pandas.Series
-            assert type(client_g_h[2]) == list
+            # assert type(client_g_h[2]) == list
 
         # 计算平均的gi和hi
         ave_gi = pandas.Series(np.zeros(shape=(gi_single_len,)))
@@ -56,10 +56,11 @@ if __name__ == '__main__':
         for index, value in enumerate(ave_hi):
             for client_hi_value in client_hi:
                 ave_hi[index] += client_hi_value[index]
-        # for j in roc_auc:
-        # ave_f1 += f1_score[j]
+        for j in f1_score:
+            ave_f1 += j
+        ave_f1 = ave_f1 / len(f1_score)
         # ave_roc_auc += j
-        # print("F1 score is: {}".format(ave_f1))
+        print("FED F1_score is: {}".format(ave_f1))
         # print(f"AUC Score is: {ave_roc_auc}")
         ave_hi = ave_hi / len(client_hi)
         ave_gi = ave_gi / len(client_gi)
