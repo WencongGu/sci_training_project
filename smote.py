@@ -7,6 +7,10 @@ from sklearn.neighbors import NearestNeighbors
 from numpy import genfromtxt
 import numpy as np
 import Data_Part
+from collections import Counter
+from sklearn.datasets import make_classification
+import imblearn
+from imblearn.over_sampling import BorderlineSMOTE
 
 
 class Smote(object):
@@ -160,6 +164,13 @@ if __name__ == '__main__':
     samples = np.array(samples)
     # print(samples)
     # N值决定负样本将会扩充至原样本的多少，如下N = 325代表将会扩充原来的325%负样本数量，但是实际上因为向下取整只会扩增至300%
+    #
+    # y是标签
+    # print('Original dataset shape %s' % Counter(y))
+    # sm = BorderlineSMOTE(random_state=42, kind="borderline-1")
+    # synthetic_points, y_res = sm.fit_resample(samples, y)
+    # print('Resampled dataset shape %s' % Counter(y_res))
+
     smote = Smote(N=325)
     synthetic_points = smote.fit(samples)
     # print(synthetic_points)
