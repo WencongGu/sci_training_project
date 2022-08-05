@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import time
 
 
 class FED_XGB:
@@ -18,7 +19,7 @@ class FED_XGB:
         self.epsilon = 0.00001  # 树生长最小增益
         self.loss = lambda y, y_hat: (y - y_hat) ** 2. / 2.  # 损失函数
         self.dependence = 0.3  # 客户端依赖系数（自己发明的）
-        self.epsilon0 = 0.994  # 主成分分析贡献率
+        self.epsilon0 = 0.993  # 主成分分析贡献率
         self.m = 29  # 训练集特征个数
         self.k = 0  # 主成分个数
         self.mat = None  # 主成分分析中线性变换的矩阵的前k列
@@ -30,11 +31,10 @@ class FED_XGB:
         if depth > self.max_depth:
             return None
         best_var, best_cut = None, None
-        max_gain = 0.  # 这里增益的初值一定要设置为0，相当于对树做剪枝，即如果算出的增益小于0则不做分裂
-        G_left_best, G_right_best, H_left_best, H_right_best = 0., 0., 0., 0.
-        # 遍历每个变量的每个切点，寻找分裂增益gain最大的切点并记录下来
-        for item in range(self.k):
-            for cut in X[item]:
+        max_gain = 0
+        G_left_best, G_right_best, H_left_best, H_right_best = 0, 0, 0, 0
+        for item in [x for x in X.columns if x not in ['g', 'h', 'Class']]:
+            for cut in X[item].drop_duplicates():  # 遍历每个变量的每个切点，寻找分裂增益gain最大的切点并记录下来
                 if self.min_child_sample:  # 这里如果指定了min_child_sample则限制分裂后叶子节点的样本数都不能小于指定值
                     if (X.loc[X[item] < cut].shape[0] < self.min_child_sample) \
                             | (X.loc[X[item] >= cut].shape[0] < self.min_child_sample):
@@ -43,18 +43,16 @@ class FED_XGB:
                 G_right = X.loc[X[item] >= cut, 'g'].sum()
                 H_left = X.loc[X[item] < cut, 'h'].sum()
                 H_right = X.loc[X[item] >= cut, 'h'].sum()
-                """!待完善：根据损失函数计算"""
-                # min_child_weight指每个叶子节点上的H，即目标函数二阶导的加和
-                if self.min_child_weight and ((H_left < self.min_child_weight) or (H_right < self.min_child_weight)):
-                    continue
-                gain = G_left ** 2. / (H_left + self.reg_lambda) + G_right ** 2. / (H_right + self.reg_lambda)
-                gain = gain - (G_left + G_right) ** 2. / (H_left + H_right + self.reg_lambda)
-                gain = gain / 2. - self.gamma
+                if self.min_child_weight:
+                    if (H_left < self.min_child_weight) | (H_right < self.min_child_weight):
+                        continue
+                gain = G_left ** 2 / (H_left + self.reg_lambda) + G_right ** 2 / (H_right + self.reg_lambda)
+                gain = gain - (G_left + G_right) ** 2 / (H_left + H_right + self.reg_lambda)
+                gain = gain / 2 - self.gamma
                 if gain > max_gain:
                     best_var, best_cut = item, cut
                     max_gain = gain
                     G_left_best, G_right_best, H_left_best, H_right_best = G_left, G_right, H_left, H_right
-        # 如果遍历完找不到可分列的点，或达到最大深度，或最大增益小于指定值，则返回None。否则递归生成树结构的字典，保存在self.tree_structure中
         if best_var is None or max_gain <= self.epsilon:
             return None
         else:
@@ -102,32 +100,32 @@ class FED_XGB:
         if X.shape[0] != Y.shape[0]:
             raise ValueError('X and Y must have the same length!')
         X = X.reset_index(drop=True)
-        self.pca_mat(X)
-        Z = self.pca(X)
         Y = Y.values
-        # 这里根据base_score参数设定权重初始值
         y_hat = np.array([self.base_score] * Y.shape[0])
+        t0 = time.time()
         for t in range(self.n_estimators):
+            t1 = time.time()
             print(f'fitting tree {t + 1}.')
-            print('原始数据规模',X.shape)
-            print('降维后规模',Z.shape)
+            print('原始数据规模', X.shape)
+            print('降维后规模', X.shape)
             if r == 0:
-                Z['g'] = self._grad(y_hat, Y)
-                Z['h'] = self._hess(y_hat, Y)
+                X['g'] = self._grad(y_hat, Y)
+                X['h'] = self._hess(y_hat, Y)
             else:
-                Z['g'] = self._grad(y_hat, Y)
-                Z['h'] = self._hess(y_hat, Y)
-                for i in range(int(self.dependence * min(len(Z['g']), len(gi)))):
-                    Z['g'][i] = gi[i]
-                    Z['h'][i] = hi[i]
-
+                X['g'] = self._grad(y_hat, Y)
+                X['h'] = self._hess(y_hat, Y)
+                for i in range(int(self.dependence * min(len(X['g']), len(gi)))):
+                    X['g'][i] = gi[i]
+                    X['h'][i] = hi[i]
             f_t = pd.Series([0.] * Y.shape[0])
-            self.tree_structure[t + 1] = self.xgb_cart_tree(Z, f_t)
+            self.tree_structure[t + 1] = self.xgb_cart_tree(X, f_t)
             y_hat = y_hat + self.rate * f_t
-            print(f'tree {t + 1} fitted.')
-        print('All fitted.')
+            t2 = time.time()
+            print(f'tree {t + 1} fitted. Time: {t2 - t1} s')
+        tt = time.time()
+        print(f'All fitted. Time: {tt - t0} s')
         print(self.tree_structure)
-        return [y_hat, Z['g'], Z['h']]
+        return [y_hat, X['g'], X['h']]
 
     def _get_tree_node_w(self, X, tree, w):
         """
@@ -156,12 +154,11 @@ class FED_XGB:
         根据训练结果预测返回原始预测值。迭代后y_t为前n-1棵树的y_hat，加和后返回n棵树的y_hat，Y
         """
         X = X.reset_index(drop=True)
-        Z = self.pca(X)
-        Y = pd.Series([self.base_score] * Z.shape[0])
+        Y = pd.Series([self.base_score] * X.shape[0])
         for t in range(self.n_estimators):
             tree = self.tree_structure[t + 1]
-            y_t = pd.Series([0.] * Z.shape[0])
-            self._get_tree_node_w(Z, tree, y_t)
+            y_t = pd.Series([0.] * X.shape[0])
+            self._get_tree_node_w(X, tree, y_t)
             Y = Y + self.rate * y_t
         return Y
 
@@ -169,18 +166,14 @@ class FED_XGB:
         """
         当指定objective为logistic时，输出概率要做一个logistic转换
         """
-
         Y = self.predict_raw(X)
         Y = Y.apply(lambda x: 1 / (1 + np.exp(-x)))
-
         return Y
 
     def pca(self, data0):
         """
         主成分分析，数据降维，用以提高程序运行速度。
         先使用训练数据集调用pca_mat函数生成正交矩阵，再进行数据降维。
-        :param data0: 数据集
-        :return: 原数据变为k个主成分列，k个主成分列命名为数字0~k-1，它们的方差贡献率为self.epsilon0
         """
         data = data0.iloc[:, :self.m]
         tran_data = data.T
@@ -216,10 +209,7 @@ class FED_XGB:
         return self.mat
 
     def test(self, data):
-        import time
-        t1 = time.time()
         import matplotlib.pyplot as plt
-        import seaborn as sns
         y = data.iloc[:, -1]
         y_hat = self.predict_raw(data)
         plt.figure(figsize=(10, 20))
@@ -230,10 +220,4 @@ class FED_XGB:
         plt.title('accuracy line plot')
         plt.legend()
         plt.show()
-        plt.figure(figsize=(10, 20))
-        sns.swarmplot(y, y_hat)
-        plt.title('scatter plot')
-        plt.show()
-        t2 = time.time()
-        print('time', t2 - t1, ' s')
         time.sleep(5)
