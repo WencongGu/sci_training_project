@@ -159,22 +159,33 @@ def less_make():
 
 
 if __name__ == '__main__':
-    less_make()
-    samples = pd.read_csv("Data_Smote/Data_Less.csv")
-    samples = np.array(samples)
+    # less_make()
+    # samples = pd.read_csv("Data_Smote/Data_Less.csv")
+    # samples = np.array(samples)
+    samples = pd.read_csv(data_set.File_Name)
     # print(samples)
     # N值决定负样本将会扩充至原样本的多少，如下N = 325代表将会扩充原来的325%负样本数量，但是实际上因为向下取整只会扩增至300%
     #
     # y是标签
-    # print('Original dataset shape %s' % Counter(y))
-    # sm = BorderlineSMOTE(random_state=42, kind="borderline-1")
-    # synthetic_points, y_res = sm.fit_resample(samples, y)
-    # print('Resampled dataset shape %s' % Counter(y_res))
+    with open(data_set.File_Name, encoding="utf-8", errors="ignore") as f:
+        data = csv.DictReader(_.replace("\x00", "") for _ in f)
+        y = []
+        for row in data:
+            if row['Class'] == '1':
+                y.append(1)
+            else:
+                y.append(0)
 
-    smote = Smote(N=325)
-    synthetic_points = smote.fit(samples)
+    # x_res就是完成BodelineSMOTE后完整的数据集
+    print('Original dataset shape %s' % Counter(y))
+    sm = BorderlineSMOTE(random_state=42, kind="borderline-1")
+    x_res, y_res = sm.fit_resample(samples, y)
+    print('Resampled dataset shape %s' % Counter(y_res))
+
+    # smote = Smote(N=325)
+    # synthetic_points = smote.fit(samples)
     # print(synthetic_points)
-    np.savetxt(data_set.File_Smote, synthetic_points, delimiter=",")
+    # np.savetxt(data_set.File_Smote, synthetic_points, delimiter=",")
     # 之后可以将该文件和原文件进行合并（Data_Part 有merge函数可以使用）目前暂时有问题，使用.bat文件进行暂时处理
     # Data_Part.PyCSV().merge_csv(save_name='train.csv', file_dir="Train")
     data = pd.read_csv('Train/creditcard1_train.csv', sep='，')
