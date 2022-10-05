@@ -17,17 +17,41 @@ def calculate_f1(y, t):
     return f1_score(t, y_result)
 
 
-def client_train(File_Name, gi, hi, round):
+# def client_train(File_Name, gi, hi, round):
+#     df = pd.read_csv(File_Name)
+#     X_train = df[df.columns[:-1].tolist()]
+#     y_train = df[df.columns[-1]]
+#     FML = FED_XGB(learning_rate=0.1,
+#                   n_estimators=5  # 总共迭代次数，每进行一轮进行一次全局更新
+#                   , max_depth=4, min_child_weight=0.2, gamma=0.03,
+#                   objective='logistic')
+#     # 得到y_hat
+#     client = FML.fit(X_train, y_train, gi, hi, round)
+#     client_y_hat = client[0]
+#     # test
+#     te = pd.read_csv('Data_Check/Data_Test.csv')
+#     X_test = te[te.columns[:-1].tolist()]
+#     y_test = te[te.columns[-1]]
+#     y_pred = FML.predict_raw(X_test)
+#     # y_pred_proba = 1./(1.+np.exp(-X_test))
+#     y_pred_proba = FML.predict_prob(X_test)
+#     f1_pred = calculate_f1(y_pred, y_test)
+#     # 返回一阶导和二阶导、f1的值、roc
+#     return [client[1], client[2], f1_pred,
+#             roc_auc_score(y_test, y_pred_proba)]
+#     # FML.save_model('model/clFML-mode.model')
+
+def server_train(File_Name):
     df = pd.read_csv(File_Name)
     X_train = df[df.columns[:-1].tolist()]
     y_train = df[df.columns[-1]]
     FML = FED_XGB(learning_rate=0.1,
-                  n_estimators=5  # 总共迭代次数，每进行一轮进行一次全局更新
+                  n_estimators=20  # 总共迭代次数，每进行一轮进行一次全局更新
                   , max_depth=4, min_child_weight=0.2, gamma=0.03,
                   objective='logistic')
     # 得到y_hat
-    client = FML.fit(X_train, y_train, gi, hi, round)
-    client_y_hat = client[0]
+    client = FML.fit(X_train, y_train)
+    # client_y_hat = client[0]
     # test
     te = pd.read_csv('Data_Check/Data_Test.csv')
     X_test = te[te.columns[:-1].tolist()]
