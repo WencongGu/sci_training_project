@@ -3,7 +3,6 @@ import pandas as pd
 import sympy
 import time
 
-
 # class FED_XGB:
 #     def __init__(self, base_score=0.5, max_depth=3, n_estimators=10, learning_rate=0.1, reg_lambda=1.,
 #                  gamma=0., min_child_sample=10, min_child_weight=0.001, objective='linear'):
@@ -709,6 +708,7 @@ import time
 #         return g, h
 from xgboost import Booster
 
+
 class FED_XGB:
     def __init__(self, base_score=0.5, max_depth=3, n_estimators=10, learning_rate=0.1, reg_lambda=1.,
                  gamma=0., min_child_sample=10, min_child_weight=0.001, objective='linear'):
@@ -769,8 +769,8 @@ class FED_XGB:
             w[id_left] = w_left
             w[id_right] = w_right
             tree = {(best_var, best_cut): {}}
-            tree[(best_var, best_cut)][('left', w_left)] = self.xgb_cart_tree(X.loc[id_left], w, depth + 1)
-            tree[(best_var, best_cut)][('right', w_right)] = self.xgb_cart_tree(X.loc[id_right], w, depth + 1)
+            tree[(best_var, best_cut)][('left', w_left)] = self.xgb_cart_tree(X.loc[id_left], w, depth + 1)  # 递归左子树
+            tree[(best_var, best_cut)][('right', w_right)] = self.xgb_cart_tree(X.loc[id_right], w, depth + 1)  # 递归右子树
         return tree
 
     def _grad(self, y_hat, Y):
@@ -792,7 +792,7 @@ class FED_XGB:
         支持linear和logistic
         """
         if self.objective == 'logistic':
-            y_hat = (1-1.0 / (1.0 + np.exp(-y_hat)))/(1.+np.exp(-y_hat))
+            y_hat = (1 - 1.0 / (1.0 + np.exp(-y_hat))) / (1. + np.exp(-y_hat))
             return y_hat * (1.0 - y_hat)
         elif self.objective == 'linear':
             return np.array([1.] * Y.shape[0])

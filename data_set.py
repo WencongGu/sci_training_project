@@ -18,3 +18,5 @@ File_Check = 'Data_Check/Data_Test.csv'
 # 训练集比例
 Train_Set = 0.8
 User_w = ['0.01']
+# 初始权重值
+base_score = 0.5
