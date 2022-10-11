@@ -41,16 +41,13 @@ def calculate_f1(y, t):
 #             roc_auc_score(y_test, y_pred_proba)]
 #     # FML.save_model('model/clFML-mode.model')
 
-def server_train(File_Name):
-    df = pd.read_csv(File_Name)
-    X_train = df[df.columns[:-1].tolist()]
-    y_train = df[df.columns[-1]]
+def server_train(all_client, all_client_y):
     FML = FED_XGB(learning_rate=0.1,
                   n_estimators=20  # 总共迭代次数，每进行一轮进行一次全局更新
                   , max_depth=4, min_child_weight=0.2, gamma=0.03,
                   objective='logistic')
     # 得到y_hat
-    client = FML.fit(X_train, y_train)
+    client = FML.fit_server(all_client, all_client_y)
     # client_y_hat = client[0]
     # test
     te = pd.read_csv('Data_Check/Data_Test.csv')
@@ -61,6 +58,5 @@ def server_train(File_Name):
     y_pred_proba = FML.predict_prob(X_test)
     f1_pred = calculate_f1(y_pred, y_test)
     # 返回一阶导和二阶导、f1的值、roc
-    return [client[1], client[2], f1_pred,
-            roc_auc_score(y_test, y_pred_proba)]
+    return roc_auc_score(y_test, y_pred_proba)
     # FML.save_model('model/clFML-mode.model')

@@ -41,49 +41,61 @@ def _hess(objective, y_hat, Y):
         raise KeyError('temporarily: use linear or logistic')
 
 
-def xgb_cart_tree_server(X, gi, hi, w, depth=0):
-    """
-        递归构造XCart树
-        """
-    if depth > 5:
-        return None
-    best_var, best_cut = None, None
-    max_gain = 0
-    G_left_best, G_right_best, H_left_best, H_right_best = 0, 0, 0, 0
-    for client in X:
-    for item in [x for x in X.columns if x not in ['g', 'h', 'Class']]:
-        for cut in X[item].drop_duplicates():  # 遍历每个变量的每个切点，寻找分裂增益gain最大的切点并记录下来
-            if 0.001:  # 这里如果指定了min_child_sample则限制分裂后叶子节点的样本数都不能小于指定值
-                if (X.loc[X[item] < cut].shape[0] < 10) \
-                        | (X.loc[X[item] >= cut].shape[0] < 10):
-                    continue
-            G_left = X.loc[X[item] < cut, 'g'].sum()
-            G_right = X.loc[X[item] >= cut, 'g'].sum()
-            H_left = X.loc[X[item] < cut, 'h'].sum()
-            H_right = X.loc[X[item] >= cut, 'h'].sum()
-            if 0.001:
-                if (H_left < 0.001) | (H_right < 0.001):
-                    continue
-            gain = G_left ** 2 / (H_left + 1) + G_right ** 2 / (H_right + 1)
-            gain = gain - (G_left + G_right) ** 2 / (H_left + H_right + 1)
-            gain = gain / 2 - 0
-            if gain > max_gain:
-                best_var, best_cut = item, cut
-                max_gain = gain
-                G_left_best, G_right_best, H_left_best, H_right_best = G_left, G_right, H_left, H_right
-    if best_var is None or max_gain <= 0.00001:
-        return None
-    else:
-        id_left = X.loc[X[best_var] < best_cut].index.tolist()
-        w_left = - G_left_best / (H_left_best + 1)
-        id_right = X.loc[X[best_var] >= best_cut].index.tolist()
-        w_right = - G_right_best / (H_right_best + 1)
-        w[id_left] = w_left
-        w[id_right] = w_right
-        tree = {(best_var, best_cut): {}}
-        tree[(best_var, best_cut)][('left', w_left)] = xgb_cart_tree_server(X.loc[id_left], w, depth + 1)  # 递归左子树
-        tree[(best_var, best_cut)][('right', w_right)] = xgb_cart_tree_server(X.loc[id_right], w, depth + 1)  # 递归右子树
-    return tree
+# def xgb_cart_tree_server(X, depth=0):
+#     """
+#         递归构造XCart树
+#         """
+#     if depth > 5:
+#         return None
+#     best_var, best_cut = None, None
+#     max_gain = 0
+#     G_left_best, G_right_best, H_left_best, H_right_best = 0, 0, 0, 0
+#     client0 = X[0]
+#     for item in [x for x in client0.columns if x not in ['g', 'h', 'Class']]:
+#         for client in X:
+#             for cut in client[item].drop_duplicates():  # 遍历客户端每个变量的每个切点，寻找分裂增益gain最大的切点并记录下来
+#                 G_left = 0
+#                 G_right = 0
+#                 H_left = 0
+#                 H_right = 0
+#                 for client_j in X:  # 遍历每一个客户端
+#                     if 0.001:  # 这里如果指定了min_child_sample则限制分裂后叶子节点的样本数都不能小于指定值
+#                         if (client_j.loc[client_j[item] < cut].shape[0] < 10) \
+#                                 | (client_j.loc[X[item] >= cut].shape[0] < 10):
+#                             continue
+#                     G_left += client_j.loc[client_j[item] < cut, 'g'].sum()
+#                     G_right += client_j.loc[client_j[item] >= cut, 'g'].sum()
+#                     H_left += client_j.loc[client_j[item] < cut, 'h'].sum()
+#                     H_right += client_j.loc[client_j[item] >= cut, 'h'].sum()
+#                 if 0.001:
+#                     if (H_left < 0.001) | (H_right < 0.001):
+#                         continue
+#                 gain = G_left ** 2 / (H_left + 1) + G_right ** 2 / (H_right + 1)
+#                 gain = gain - (G_left + G_right) ** 2 / (H_left + H_right + 1)
+#                 gain = gain / 2 - 0
+#                 if gain > max_gain:
+#                     best_var, best_cut = item, cut
+#                     max_gain = gain
+#                     G_left_best, G_right_best, H_left_best, H_right_best = G_left, G_right, H_left, H_right
+#     if best_var is None or max_gain <= 0.00001:
+#         return None
+#     else:
+#         all_client_left = []
+#         for client in X:
+#             id_left = client.loc[client[best_var] < best_cut].index.tolist()
+#             all_client_left.append(client[id_left])
+#         # w_left = - G_left_best / (H_left_best + 1)
+#         all_client_right = []
+#         for client in X:
+#             id_right = X.loc[X[best_var] >= best_cut].index.tolist()
+#             all_client_right.append(client[id_right])
+#         # w_right = - G_right_best / (H_right_best + 1)
+#         # w[id_left] = w_left
+#         # w[id_right] = w_right
+#         tree = {(best_var, best_cut): {}}
+#         tree[(best_var, best_cut)]['left'] = xgb_cart_tree_server(all_client_left, depth + 1)  # 递归左子树
+#         tree[(best_var, best_cut)]['right'] = xgb_cart_tree_server(all_client_right, depth + 1)  # 递归右子树
+#     return tree
 
 
 if __name__ == '__main__':
@@ -149,7 +161,8 @@ if __name__ == '__main__':
 
     # 客户端训练
     users = data_set.num_user
-    all_client_X = []  # 所有客户端的列表
+    all_client_X = []  # 所有客户端的列表X
+    all_client_Y = []  # 所有客户端的列表Y
 
     # client_g_h = XGBoost_train.server_train(client_file)
     """
@@ -166,32 +179,41 @@ if __name__ == '__main__':
         df = pd.read_csv(client_file)
         X_train = df[df.columns[:-1].tolist()]
         Y_train = df[df.columns[-1]]
-        if X_train.shape[0] != Y_train.shape[0]:
-            raise ValueError('X and Y must have the same length!')
+        # if X_train.shape[0] != Y_train.shape[0]:
+        #     raise ValueError('X and Y must have the same length!')
         X = X_train.reset_index(drop=True)
+        # Y = Y_train.values
+        # y_hat = np.array([data_set.base_score] * Y.shape[0])
+        # t0 = time.time()
+        # gi = _grad('logistic', y_hat, Y)
+        # hi = _hess('logistic', y_hat, Y)
+        # assert type(gi) == np.ndarray
+        # assert type(hi) == np.ndarray
+        # X['g'] = gi
+        # X['h'] = hi
         all_client_X.append(X)
-        Y = Y_train.values
-        y_hat = np.array([data_set.base_score] * Y.shape[0])
-        t0 = time.time()
-        gi = _grad('logistic', y_hat, Y)
-        hi = _hess('logistic', y_hat, Y)
-        assert type(gi) == np.ndarray
-        assert type(hi) == np.ndarray
-        gi_single_len = min(gi_single_len, gi.shape[0])
-        hi_single_len = min(hi_single_len, hi.shape[0])
-        client_hi.append(hi)
-        client_gi.append(gi)
+        all_client_Y.append(Y_train)
+        # gi_single_len = min(gi_single_len, gi.shape[0])
+        # hi_single_len = min(hi_single_len, hi.shape[0])
+        # client_hi.append(hi)
+        # client_gi.append(gi)
 
+    roc_auc = XGBoost_train.server_train(all_client_X, all_client_Y)
+    print(roc_auc)
     # 计算平均的gi和hi
-    sum_gi = pd.Series(np.zeros(shape=(gi_single_len,)))
-    sum_hi = pd.Series(np.zeros(shape=(hi_single_len,)))
-    for index, value in enumerate(sum_gi):
-        for client_gi_value in client_gi:
-            sum_gi[index] += client_gi_value[index]
-    for index, value in enumerate(sum_hi):
-        for client_hi_value in client_hi:
-            sum_hi[index] += client_hi_value[index]
-
-    sum_gi = np.array(sum_gi)
-    sum_hi = np.array(sum_hi)
-    xgb_cart_tree_server(all_client_X, sum_gi, sum_hi)
+    # sum_gi = pd.Series(np.zeros(shape=(gi_single_len,)))
+    # sum_hi = pd.Series(np.zeros(shape=(hi_single_len,)))
+    # for index, value in enumerate(sum_gi):
+    #     for client_gi_value in client_gi:
+    #         sum_gi[index] += client_gi_value[index]
+    # for index, value in enumerate(sum_hi):
+    #     for client_hi_value in client_hi:
+    #         sum_hi[index] += client_hi_value[index]
+    #
+    # sum_gi = np.array(sum_gi)
+    # sum_hi = np.array(sum_hi)
+    # FML = FED_XGB(learning_rate=0.1,
+    #               n_estimators=20  # 总共迭代次数，每进行一轮进行一次全局更新
+    #               , max_depth=4, min_child_weight=0.2, gamma=0.03,
+    #               objective='logistic')
+    # FML.xgb_cart_tree_server(all_client_X)

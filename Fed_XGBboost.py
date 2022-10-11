@@ -773,6 +773,66 @@ class FED_XGB:
             tree[(best_var, best_cut)][('right', w_right)] = self.xgb_cart_tree(X.loc[id_right], w, depth + 1)  # 递归右子树
         return tree
 
+    def xgb_cart_tree_server(self, X, w, depth=0):
+        """
+        递归构造XCart树（并行化版本）
+        """
+        if depth > self.max_depth:
+            return None
+        best_var, best_cut = None, None
+        max_gain = 0
+        G_left_best, G_right_best, H_left_best, H_right_best = 0, 0, 0, 0
+        client0 = X[0]
+        for item in [x for x in client0.columns if x not in ['g', 'h', 'Class']]:
+            for client in X:
+                for cut in client[item].drop_duplicates():  # 遍历客户端每个变量的每个切点，寻找分裂增益gain最大的切点并记录下来
+                    G_left = 0
+                    G_right = 0
+                    H_left = 0
+                    H_right = 0
+                    for client_j in X:  # 遍历每一个客户端
+                        if self.min_child_sample:  # 这里如果指定了min_child_sample则限制分裂后叶子节点的样本数都不能小于指定值
+                            if (client_j.loc[client_j[item] < cut].shape[0] < self.min_child_sample) \
+                                    | (client_j.loc[X[item] >= cut].shape[0] < self.min_child_sample):
+                                continue
+                        G_left += client_j.loc[client_j[item] < cut, 'g'].sum()
+                        G_right += client_j.loc[client_j[item] >= cut, 'g'].sum()
+                        H_left += client_j.loc[client_j[item] < cut, 'h'].sum()
+                        H_right += client_j.loc[client_j[item] >= cut, 'h'].sum()
+                    if self.min_child_weight:
+                        if (H_left < self.min_child_weight) | (H_right < self.min_child_weight):
+                            continue
+                    gain = G_left ** 2 / (H_left + self.reg_lambda) + G_right ** 2 / (H_right + self.reg_lambda)
+                    gain = gain - (G_left + G_right) ** 2 / (H_left + H_right + self.reg_lambda)
+                    gain = gain / 2 - self.gamma
+                    if gain > max_gain:
+                        best_var, best_cut = item, cut
+                        max_gain = gain
+                        G_left_best, G_right_best, H_left_best, H_right_best = G_left, G_right, H_left, H_right
+        if best_var is None or max_gain <= self.epsilon:
+            return None
+        else:
+            # 给每个叶子节点上的样本分别赋上相应的权重值
+            w_left = - G_left_best / (H_left_best + 1)
+            w_right = - G_right_best / (H_right_best + 1)
+            all_client_left = []
+            for client in X:
+                id_left = client.loc[client[best_var] < best_cut].index.tolist()
+                w[id_left] = w_left
+                all_client_left.append(client[id_left])
+
+            all_client_right = []
+            for client in X:
+                id_right = X.loc[X[best_var] >= best_cut].index.tolist()
+                w[id_right] = w_right
+                all_client_right.append(client[id_right])
+            tree = {(best_var, best_cut): {}}
+            tree[(best_var, best_cut)][('left', w_left)] = self.xgb_cart_tree_server(all_client_left, w,
+                                                                                     depth + 1)  # 递归左子树
+            tree[(best_var, best_cut)][('right', w_right)] = self.xgb_cart_tree_server(all_client_right, w,
+                                                                                       depth + 1)  # 递归右子树
+        return tree
+
     def _grad(self, y_hat, Y):
         """
         计算目标函数的一阶导
@@ -798,6 +858,54 @@ class FED_XGB:
             return np.array([1.] * Y.shape[0])
         else:
             raise KeyError('temporarily: use linear or logistic')
+
+    def fit_server(self, X, Y):
+        """
+        根据训练数据集X和标签集Y训练出树结构和权重(并行化版本)
+        """
+        # if X.shape[0] != Y.shape[0]:
+        #     raise ValueError('X and Y must have the same length!')
+        # X = X.reset_index(drop=True)
+        df_y = None
+        for client_y in Y:
+            df_y = pd.concat([df_y, client_y], axis=0)
+        Y = df_y.values
+        y_hat = np.array([self.base_score] * Y.shape[0])
+        t0 = time.time()
+        for t in range(self.n_estimators):
+            t1 = time.time()
+            print(f'fitting tree {t + 1}.')
+            i = 0
+            index = 0  # 用于测试及Y对每个client的分片偏移量记录
+            for client in X:
+                # shape += client.shape()
+                print(f'客户端 {i} 原始数据总规模', client.shape)
+                gi = self._grad(y_hat, Y)
+                hi = self._hess(y_hat, Y)
+                assert type(gi) == np.ndarray
+                assert type(hi) == np.ndarray
+                client['g'] = gi[index:index + client.shape[0]]
+                client['h'] = hi[index:index + client.shape[0]]
+                index = index + client.shape[0] + 1
+                i += 1
+            # if r == 0:
+            # X['g'] = self._grad(y_hat, Y)
+            # X['h'] = self._hess(y_hat, Y)
+            # else:
+            # X['g'] = self._grad(y_hat, Y)
+            # X['h'] = self._hess(y_hat, Y)
+            # for i in range(int(self.dependence * min(len(X['g']), len(gi)))):
+            #     X['g'][i] = gi[i]
+            #     X['h'][i] = hi[i]
+            f_t = pd.Series([0.] * Y.shape[0])
+            self.tree_structure[t + 1] = self.xgb_cart_tree_server(X, f_t)
+            y_hat = y_hat + self.rate * f_t
+            t2 = time.time()
+            print(f'tree {t + 1} fitted. Time: {t2 - t1} s')
+        tt = time.time()
+        print(f'All fitted. Time: {tt - t0} s')
+        print(self.tree_structure)
+        return [y_hat, X['g'], X['h']]
 
     def fit(self, X, Y):
         """
