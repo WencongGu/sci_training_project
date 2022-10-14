@@ -819,13 +819,13 @@ class FED_XGB:
             for client in X:
                 id_left = client.loc[client[best_var] < best_cut].index.tolist()
                 w[id_left] = w_left
-                all_client_left.append(client[id_left])
+                all_client_left.append(client.loc[id_left])
 
             all_client_right = []
             for client in X:
-                id_right = X.loc[X[best_var] >= best_cut].index.tolist()
+                id_right = client.loc[client[best_var] >= best_cut].index.tolist()
                 w[id_right] = w_right
-                all_client_right.append(client[id_right])
+                all_client_right.append(client.loc[id_right])
             tree = {(best_var, best_cut): {}}
             tree[(best_var, best_cut)][('left', w_left)] = self.xgb_cart_tree_server(all_client_left, w,
                                                                                      depth + 1)  # 递归左子树
@@ -883,8 +883,8 @@ class FED_XGB:
                 # shape += client.shape()
                 print(f'客户端 {i} 原始数据总规模', client.shape)
 
-                assert type(gi) == np.ndarray
-                assert type(hi) == np.ndarray
+                # assert type(gi) == np.ndarray
+                # assert type(hi) == np.ndarray
                 client['g'] = gi[index:index + client.shape[0]]
                 client['h'] = hi[index:index + client.shape[0]]
                 index = index + client.shape[0]
