@@ -793,7 +793,7 @@ class FED_XGB:
                     for client_j in X:  # 遍历每一个客户端
                         if self.min_child_sample:  # 这里如果指定了min_child_sample则限制分裂后叶子节点的样本数都不能小于指定值
                             if (client_j.loc[client_j[item] < cut].shape[0] < self.min_child_sample) \
-                                    | (client_j.loc[X[item] >= cut].shape[0] < self.min_child_sample):
+                                    | (client_j.loc[client_j[item] >= cut].shape[0] < self.min_child_sample):
                                 continue
                         G_left += client_j.loc[client_j[item] < cut, 'g'].sum()
                         G_right += client_j.loc[client_j[item] >= cut, 'g'].sum()
@@ -875,18 +875,19 @@ class FED_XGB:
         for t in range(self.n_estimators):
             t1 = time.time()
             print(f'fitting tree {t + 1}.')
-            i = 0
+            i = 1
             index = 0  # 用于测试及Y对每个client的分片偏移量记录
+            gi = self._grad(y_hat, Y)
+            hi = self._hess(y_hat, Y)
             for client in X:
                 # shape += client.shape()
                 print(f'客户端 {i} 原始数据总规模', client.shape)
-                gi = self._grad(y_hat, Y)
-                hi = self._hess(y_hat, Y)
+
                 assert type(gi) == np.ndarray
                 assert type(hi) == np.ndarray
                 client['g'] = gi[index:index + client.shape[0]]
                 client['h'] = hi[index:index + client.shape[0]]
-                index = index + client.shape[0] + 1
+                index = index + client.shape[0]
                 i += 1
             # if r == 0:
             # X['g'] = self._grad(y_hat, Y)
