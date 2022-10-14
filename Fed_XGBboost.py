@@ -793,7 +793,7 @@ class FED_XGB:
                     for client_j in X:  # 遍历每一个客户端
                         if self.min_child_sample:  # 这里如果指定了min_child_sample则限制分裂后叶子节点的样本数都不能小于指定值
                             if (client_j.loc[client_j[item] < cut].shape[0] < self.min_child_sample) \
-                                    | (client_j.loc[X[item] >= cut].shape[0] < self.min_child_sample):
+                                    | (client_j.loc[client_j[item] >= cut].shape[0] < self.min_child_sample):
                                 continue
                         G_left += client_j.loc[client_j[item] < cut, 'g'].sum()
                         G_right += client_j.loc[client_j[item] >= cut, 'g'].sum()
@@ -819,13 +819,13 @@ class FED_XGB:
             for client in X:
                 id_left = client.loc[client[best_var] < best_cut].index.tolist()
                 w[id_left] = w_left
-                all_client_left.append(client[id_left])
+                all_client_left.append(client.loc[id_left])
 
             all_client_right = []
             for client in X:
-                id_right = X.loc[X[best_var] >= best_cut].index.tolist()
+                id_right = client.loc[client[best_var] >= best_cut].index.tolist()
                 w[id_right] = w_right
-                all_client_right.append(client[id_right])
+                all_client_right.append(client.loc[id_right])
             tree = {(best_var, best_cut): {}}
             tree[(best_var, best_cut)][('left', w_left)] = self.xgb_cart_tree_server(all_client_left, w,
                                                                                      depth + 1)  # 递归左子树
@@ -880,13 +880,13 @@ class FED_XGB:
             for client in X:
                 # shape += client.shape()
                 print(f'客户端 {i} 原始数据总规模', client.shape)
-                gi = self._grad(y_hat, Y)
-                hi = self._hess(y_hat, Y)
-                assert type(gi) == np.ndarray
-                assert type(hi) == np.ndarray
+                gi = pd.series(self._grad(y_hat, Y))
+                hi = pd.series(self._hess(y_hat, Y))
+                # assert type(gi) == np.ndarray
+                # assert type(hi) == np.ndarray
                 client['g'] = gi[index:index + client.shape[0]]
                 client['h'] = hi[index:index + client.shape[0]]
-                index = index + client.shape[0] + 1
+                index = index + client.shape[0]
                 i += 1
             # if r == 0:
             # X['g'] = self._grad(y_hat, Y)
