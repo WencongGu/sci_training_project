@@ -43,11 +43,11 @@ def calculate_f1(y, t):
 
 def server_train(all_client, all_client_y):
     FML = FED_XGB(learning_rate=0.1,
-                  n_estimators=20  # 总共迭代次数，每进行一轮进行一次全局更新
+                  n_estimators=5  # 总共迭代次数，每进行一轮进行一次全局更新
                   , max_depth=4, min_child_weight=0.2, gamma=0.03,
                   objective='logistic')
     # 得到y_hat
-    client = FML.fit_server(all_client, all_client_y)
+    FML.fit_server(all_client, all_client_y)
     # client_y_hat = client[0]
     # test
     te = pd.read_csv('Data_Check/Data_Test.csv')

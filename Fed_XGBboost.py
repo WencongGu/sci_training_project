@@ -906,7 +906,7 @@ class FED_XGB:
         tt = time.time()
         print(f'All fitted. Time: {tt - t0} s')
         print(self.tree_structure)
-        return [y_hat, X['g'], X['h']]
+        return self.tree_structure
 
     def fit(self, X, Y):
         """
