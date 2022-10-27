@@ -875,13 +875,14 @@ class FED_XGB:
         for t in range(self.n_estimators):
             t1 = time.time()
             print(f'fitting tree {t + 1}.')
-            i = 0
+            i = 1
             index = 0  # 用于测试及Y对每个client的分片偏移量记录
+            gi = self._grad(y_hat, Y)
+            hi = self._hess(y_hat, Y)
             for client in X:
                 # shape += client.shape()
                 print(f'客户端 {i} 原始数据总规模', client.shape)
-                gi = pd.series(self._grad(y_hat, Y))
-                hi = pd.series(self._hess(y_hat, Y))
+
                 # assert type(gi) == np.ndarray
                 # assert type(hi) == np.ndarray
                 client['g'] = gi[index:index + client.shape[0]]
@@ -905,7 +906,7 @@ class FED_XGB:
         tt = time.time()
         print(f'All fitted. Time: {tt - t0} s')
         print(self.tree_structure)
-        return [y_hat, X['g'], X['h']]
+        return self.tree_structure
 
     def fit(self, X, Y):
         """
