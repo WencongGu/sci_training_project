@@ -11,9 +11,9 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
 
         # 定义一维卷积层
-        self.conv1d_1 = nn.Conv1d(feature_size, 10, kernel_size=3)
-        self.conv1d_2 = nn.Conv1d(10, 20, kernel_size=3)
-        self.conv1d_3 = nn.Conv1d(20, 30, kernel_size=3)
+        self.conv1d_1 = nn.Conv1d(in_channels=feature_size, out_channels=10, kernel_size=3)
+        self.conv1d_2 = nn.Conv1d(in_channels=10, out_channels=20, kernel_size=3)
+        self.conv1d_3 = nn.Conv1d(in_channels=20, out_channels=30, kernel_size=3)
 
         # 池化
         self.pooling = nn.MaxPool1d(2)
@@ -21,8 +21,9 @@ class CNN(nn.Module):
 
     def forward(self, x):
         # batch_size = x.size(0)
-        x = fun.relu(self.pooling(self.convid_1(x)))
-        x = fun.relu(self.pooling(self.convid_2(x)))
+        x = fun.relu(self.pooling(self.conv1d_1(x)))
+        x = fun.relu(self.pooling(self.conv1d_2(x)))
+        x = fun.relu(self.pooling(self.conv1d_3(x)))
         # x = x.view(batch_size, -1)
         # x = self.fc(x)
         return x
@@ -36,5 +37,6 @@ if __name__ == "__main__":
     train_set = pandas.read_csv('Part_Data/Data_Trian_1.csv', sep=',', header=0)
     # print(train_set)
     train_loader = data.DataLoader(dataset=train_set, batch_size=batch_size, shuffle=True, drop_last=False)
+    # print(train_loader)
     print(cnn.forward(train_loader))
-    cnn.forward(train_loader)
+    # cnn.forward(train_loader)
