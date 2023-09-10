@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from Constants import *
-from Data_process import MyDataset, data_train, data_val
+from Data_process import MyDataset
 from Model_CNN import model_cnn, loss_fn_cnn, optimizer_cnn
 from Model_Linear import model_linear, loss_fn_linear, optimizer_linear
 from Model_access import ModelAccess
@@ -18,8 +18,8 @@ data = MyDataset(path_train)
 data = pd.read_csv(path_train)  # 但是要注意这个数据应当包含标签值
 data = MyDataset(csv_data=data)
 
-
-# 也可以使用在Data_process.py中直接定义好的data_train，data_val，上面已经导入了
+data_train = MyDataset(path=path_train)
+data_val = MyDataset(path=path_val)
 
 # ！！！现在不论是训练模型还是使用模型，传入数据都只需要是MyDataset类型就行，不必多虑
 def myLinear():
