@@ -40,9 +40,11 @@ def myCNN():
     return acc_cnn
 
 
-def toCSV(data:torch.Tensor,path='./data_transformed/'):
-    data_np=data.view(data.shape[0],-1).detach().numpy()
-    np.savetxt(path+'tensor.csv', data_np,delimiter=',')
+def toCSV(data : torch.Tensor, path='./data_transformed/'):
+    data_np = data.view(data.shape[0], -1).detach().numpy()
+    # 到这一步的data_np已经是numpy的数据类型了，或者再用下面的代码转化为DataFrame，不如直接扔给XGBoost使用，不用存为.csv_data
+    # data_pd = pd.DataFrame(data_np)
+    np.savetxt(path + 'tensor.csv', data_np, delimiter=',')
 
 
 acc_cnn = myCNN()
