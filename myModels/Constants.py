@@ -18,11 +18,11 @@ device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 # ！！！ 训练和验证数据集的路径和文件名，一次导入一个CSV文件，想要操作DataFrame可以在Data_process中的myDataset类
 train_data_path = './Part_Data/'
 train_data_name = 'Data_Train_1.csv'
-train_data_path = './Part_Data/'
+val_data_path = './Part_Data/'
 val_data_name = 'Data_Train_2.csv'
 
 path_train = train_data_path + train_data_name
-path_val = train_data_path + val_data_name
+path_val = val_data_path + val_data_name
 
 model_save_path = './models/'
 linear_model_name = 'linear_model.pt'
