@@ -1,4 +1,5 @@
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 import datetime
 from typing import Any
@@ -84,6 +85,18 @@ class ModelAccess:
                 total += label.shape[0]
                 correct += (predict == label).int().sum()
             print('{}准确率：{:.2f}'.format(name, correct / total))
+    
+    def visualization(self):
+        w = SummaryWriter(log_dir = './vis/vis_cnn')
+        w.add_graph(self.model, torch.rand([144, 1, 28]))
+        w.close()
+
+    def save_model(self):
+        torch.save(self.model.state_dict(), model_save_path + cnn_model_name)
+        
+    def load_model(self):
+        with open(model_save_path + cnn_model_name):
+            self.model.load_state_dict(torch.load(model_save_path + cnn_model_name))
 
     def __call__(self, dataset) -> Any:
         data = dataset.data
