@@ -1,13 +1,13 @@
-import pandas as pd
 import numpy as np
-
-import torch
+import pandas as pd
 
 from Constants import *
-from Data_process import MyDataset
+from Data_process import MyDataset, data_train, data_val
 from Model_CNN import model_cnn, loss_fn_cnn, optimizer_cnn
 from Model_Linear import model_linear, loss_fn_linear, optimizer_linear
 from Model_access import ModelAccess
+from Model_AnoGAN import ModelAccess_AnoGAN
+from Model_EfficientGAN import ModelAccess_EGAN
 
 # 更多参数可以在Constants.py中设置。
 
@@ -18,8 +18,8 @@ data = MyDataset(path_train)
 data = pd.read_csv(path_train)  # 但是要注意这个数据应当包含标签值
 data = MyDataset(csv_data=data)
 
-data_train = MyDataset(path=path_train)
-data_val = MyDataset(path=path_val)
+
+# 也可以使用在Data_process.py中直接定义好的data_train，data_val，上面已经导入了
 
 # ！！！现在不论是训练模型还是使用模型，传入数据都只需要是MyDataset类型就行，不必多虑
 def myLinear():
@@ -39,11 +39,20 @@ def myCNN():
     acc_cnn(data_val)  # 调用模型，直接输出转化后的数据
     return acc_cnn
 
+def myAnoGAN():
+    acc_anogan=ModelAccess_AnoGAN(data_train=data_train, data_val=data_val)
+    acc_anogan.train_model()
+    acc_anogan.validate()
 
-def toCSV(data : torch.Tensor, path='./data_transformed/'):
+
+def myEGAN():
+    acc_egan=ModelAccess_EGAN(data_train=data_train, data_val=data_val)
+    acc_egan.train_model()
+    acc_egan.validate()
+
+
+def toCSV(data: torch.Tensor, path='./data_transformed/'):
     data_np = data.view(data.shape[0], -1).detach().numpy()
-    # 到这一步的data_np已经是numpy的数据类型了，或者再用下面的代码转化为DataFrame，不如直接扔给XGBoost使用，不用存为.csv_data
-    # data_pd = pd.DataFrame(data_np)
     np.savetxt(path + 'tensor.csv', data_np, delimiter=',')
 
 
