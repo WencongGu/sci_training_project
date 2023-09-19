@@ -109,6 +109,11 @@ if __name__ == '__main__':
     # 将训练集平均分配给各用户机
     Data_Part.PyCSV().split_csv(csv_path, save_dir)
 
+    '''
+    根据cnn进行特征提取
+    '''
+
+
     # 客户端训练(每个客户端单独建树)
     # users = data_set.num_user
     # client_gi = []
@@ -175,7 +180,7 @@ if __name__ == '__main__':
     gi_single_len = INT_MAX
     hi_single_len = INT_MAX
     for i in range(users):
-        client_file = 'Part_Data/Data_Trian_' + str(i + 1) + '.csv'
+        client_file = 'Part_Data/Data_Train_' + str(i + 1) + '.csv'
         df = pd.read_csv(client_file)
         X_train = df[df.columns[:-1].tolist()]
         Y_train = df[df.columns[-1]]

@@ -5,6 +5,9 @@ from sklearn.metrics import f1_score, roc_auc_score
 from sklearn.feature_extraction.text import TfidfTransformer
 from xgboost import XGBClassifier
 from Fed_XGBboost import FED_XGB
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve
+import joblib
 # from re_FedXGBoost import FED_XGB
 import data_set
 import numpy
@@ -57,6 +60,26 @@ def server_train(all_client, all_client_y):
     # y_pred_proba = 1./(1.+np.exp(-X_test))
     y_pred_proba = FML.predict_prob(X_test)
     f1_pred = calculate_f1(y_pred, y_test)
+
+    # 保存模型,我们想要导入的是模型本身，所以用“wb”方式写入，即是二进制方式
+    # joblib.dump(FML, 'FML_model.dat')
+
+    plt.figure(1)
+    # plt.plot(y_test, c="r", label="y_test")
+    # plt.plot(y_pred_proba, c="b", label="y_pred")
+    plt.scatter(np.array(range(y_test.shape[0])), y_test, c='red', label="y_test")
+    plt.scatter(np.array(range(y_pred_proba.shape[0])), y_pred_proba, c='blue', label="y_pred")
+    plt.legend()
+    plt.show()
+
+    # 绘制roc曲线
+    plt.figure(2)
+    fpr, tpr, thresholds = roc_curve(y_test, y_pred_proba)
+    plt.plot(fpr, tpr, label='ROC')
+    plt.xlabel('FPR')
+    plt.ylabel('TPR')
+    plt.show()
+
     # 返回一阶导和二阶导、f1的值、roc
     return roc_auc_score(y_test, y_pred_proba)
     # FML.save_model('model/clFML-mode.model')

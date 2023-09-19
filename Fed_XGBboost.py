@@ -983,7 +983,7 @@ class FED_XGB:
         """
         Y = self.predict_raw(X)
         Y = Y.apply(lambda x: 1 / (1 + np.exp(-x)))
-        return Y
+        return np.array(Y > 0.5, dtype='int')
 
     def pca(self, data0):
         """
