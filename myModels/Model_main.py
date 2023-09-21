@@ -15,13 +15,18 @@ from Model_EfficientGAN import ModelAccess_EGAN
 
 # ！！！经过修改，创建数据(MyDataset)时即可以传入csv格式的数据（csv_data参数），也可以传入文件路径（path参数）
 # 如：
-data = MyDataset(path_train)
+# data = MyDataset(path_train)
 for i in range(data_set.num_user):
-    client_data = path_train_client + str(i + 1) + '.csv'
+    client_data_path = path_train_client + str(i + 1) + '.csv'
+    client_data = pd.read_csv(client_data_path)
+    test_data_path = '../Data_Check/Data_Test.csv'
+    test_data = pd.read_csv('../Data_Check/Data_Test.csv')
+    data = MyDataset(test_data_path)
+
+
     # 或者：
     # data = pd.read_csv(path_train)  # 但是要注意这个数据应当包含标签值
     # data = MyDataset(csv_data=data)
-
 
     # 也可以使用在Data_process.py中直接定义好的data_train，data_val，上面已经导入了
 
@@ -43,21 +48,30 @@ for i in range(data_set.num_user):
         acc_cnn(data_val)  # 调用模型，直接输出转化后的数据
         return acc_cnn
 
+
     def myAnoGAN():
-        acc_anogan=ModelAccess_AnoGAN(data_train=data_train, data_val=data_val)
+        acc_anogan = ModelAccess_AnoGAN(data_train=data_train, data_val=data_val)
         acc_anogan.train_model()
         acc_anogan.validate()
 
 
     def myEGAN():
-        acc_egan=ModelAccess_EGAN(data_train=data_train, data_val=data_val)
+        acc_egan = ModelAccess_EGAN(data_train=data_train, data_val=data_val)
         acc_egan.train_model()
         acc_egan.validate()
 
 
     def toCSV(data: torch.Tensor, path='./data_transformed/'):
         data_np = data.view(data.shape[0], -1).detach().numpy()
-        np.savetxt(path + 'tensor_' + str(i + 1) + '.csv', data_np, delimiter=',')
+        data_np = np.around(data_np, 2)
+        rows, columns = data_np.shape
+        # labels = client_data['Class'].head(rows).to_numpy()
+        labels = test_data['Class'].head(rows).to_numpy()
+        ids = np.array(['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'Class'])
+        data_np = pd.DataFrame(np.append(data_np, labels.reshape(rows, 1), axis=1), columns=ids)
+        # data_np.to_csv(path + 'tensor_' + str(i + 1) + '.csv', index=False)
+        data_np.to_csv('../Data_Check/Data_test_cnn.csv', index=False)
+        # np.savetxt(path + 'tensor_' + str(i + 1) + '.csv', data_np, delimiter=',')
 
 
     acc_cnn = myCNN()

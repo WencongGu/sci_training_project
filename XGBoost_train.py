@@ -46,19 +46,24 @@ def calculate_f1(y, t):
 
 def server_train(all_client, all_client_y):
     FML = FED_XGB(learning_rate=0.1,
-                  n_estimators=5  # 总共迭代次数，每进行一轮进行一次全局更新
+                  n_estimators=1  # 总共迭代次数，每进行一轮进行一次全局更新
                   , max_depth=4, min_child_weight=0.2, gamma=0.03,
                   objective='logistic')
     # 得到y_hat
     FML.fit_server(all_client, all_client_y)
     # client_y_hat = client[0]
     # test
-    te = pd.read_csv('Data_Check/Data_Test.csv')
+    te = pd.read_csv('Data_Check/Data_Test_cnn.csv')
     X_test = te[te.columns[:-1].tolist()]
     y_test = te[te.columns[-1]]
     y_pred = FML.predict_raw(X_test)
     # y_pred_proba = 1./(1.+np.exp(-X_test))
     y_pred_proba = FML.predict_prob(X_test)
+    y_test.to_csv('Data_Check/ytest.csv')
+    y_pred.to_csv('Data_Check/ypred.csv')
+    print('y_test:', y_test)
+    print('y_pred:', y_pred)
+    print('y_pred_prob:', y_pred_proba)
     f1_pred = calculate_f1(y_pred, y_test)
 
     # 保存模型,我们想要导入的是模型本身，所以用“wb”方式写入，即是二进制方式

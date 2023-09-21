@@ -710,7 +710,7 @@ from xgboost import Booster
 
 
 class FED_XGB:
-    def __init__(self, base_score=0.5, max_depth=3, n_estimators=10, learning_rate=0.1, reg_lambda=1.,
+    def __init__(self, base_score=0.4, max_depth=3, n_estimators=10, learning_rate=0.1, reg_lambda=1.,
                  gamma=0., min_child_sample=10, min_child_weight=0.001, objective='linear'):
         self.base_score = base_score  # 最开始时给叶子节点权重所赋的值，默认0.5，迭代次数够多的话，结果对这个初值不敏感
         self.max_depth = max_depth  # 最大数深度，3
@@ -722,11 +722,12 @@ class FED_XGB:
         self.min_child_weight = min_child_weight  # 每个叶子节点的Hessian矩阵和，下面代码会细讲
         self.objective = objective  # 目标函数
         self.tree_structure = {}  # 用一个字典来存储每一颗树的树结构
+        # self.epsilon = 0.00001  # 树生长最小增益
         self.epsilon = 0.00001  # 树生长最小增益
         self.loss = lambda y, y_hat: (y - y_hat) ** 2. / 2.  # 损失函数
         self.dependence = 0.3  # 客户端依赖系数（自己发明的）
         self.epsilon0 = 0.993  # 主成分分析贡献率
-        self.m = 29  # 训练集特征个数
+        self.m = 10  # 训练集特征个数
         self.k = 0  # 主成分个数
         self.mat = None  # 主成分分析中线性变换的矩阵的前k列
 
@@ -805,11 +806,12 @@ class FED_XGB:
                     gain = G_left ** 2 / (H_left + self.reg_lambda) + G_right ** 2 / (H_right + self.reg_lambda)
                     gain = gain - (G_left + G_right) ** 2 / (H_left + H_right + self.reg_lambda)
                     gain = gain / 2 - self.gamma
-                    if gain > max_gain:
+                    gain = 0 - gain
+                    if abs(gain) > abs(max_gain):
                         best_var, best_cut = item, cut
                         max_gain = gain
                         G_left_best, G_right_best, H_left_best, H_right_best = G_left, G_right, H_left, H_right
-        if best_var is None or max_gain <= self.epsilon:
+        if best_var is None or abs(max_gain) <= self.epsilon:
             return None
         else:
             # 给每个叶子节点上的样本分别赋上相应的权重值
