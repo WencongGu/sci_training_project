@@ -100,4 +100,4 @@ class ModelAccess:
 
     def __call__(self, dataset) -> Any:
         data = dataset.data
-        return self.model(data)
+        return torch.softmax(self.model(data), dim=1)
