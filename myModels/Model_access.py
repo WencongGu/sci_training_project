@@ -37,8 +37,9 @@ class ModelAccess:
 
                     if self.pattern == 'linear':
                         data = data.view(-1, n_features)
-
-                    outputs = self.model(data)
+                        outputs = self.model(data)
+                    else:
+                        outputs = self.model(data)[0]
                     loss = self.loss_fn(outputs, label)
                     self.optimizer.zero_grad()
                     loss.backward()
@@ -53,8 +54,9 @@ class ModelAccess:
                 label = self.train_data.label
                 if self.pattern == 'linear':
                     data = data.view(-1, n_features)
-
-                outputs = self.model(data)
+                    outputs = self.model(data)
+                else:
+                    outputs = self.model(data)[0]
                 loss = self.loss_fn(outputs, label)
                 self.optimizer.zero_grad()
                 loss.backward()
@@ -63,7 +65,7 @@ class ModelAccess:
                 if epoch == 1 or epoch % 10 == 0:
                     print('{}  循环轮次： {}\t\t*loss:  {:.5f}'.format(datetime.datetime.now(), epoch, loss_train))
 
-        print('训练完成', datetime.datetime.now())
+        print('CNN训练完成', datetime.datetime.now())
 
     def validate(self, val_data=None):
         self.val_data = val_data
@@ -80,7 +82,7 @@ class ModelAccess:
                     data = data.view(-1, n_features)
                     outputs = self.model(data)
                 if self.pattern == 'cnn':
-                    outputs = self.model(data).max(dim=1)
+                    outputs = self.model(data)[0].max(dim=1)
                 _, predict = outputs
                 total += label.shape[0]
                 correct += (predict == label).int().sum()
@@ -98,6 +100,11 @@ class ModelAccess:
         with open(model_save_path + cnn_model_name):
             self.model.load_state_dict(torch.load(model_save_path + cnn_model_name))
 
-    def __call__(self, dataset) -> Any:
+    def __call__(self, dataset, is_predict=False) -> Any:
         data = dataset.data
-        return torch.softmax(self.model(data), dim=1)
+        if self.pattern == 'CNN':
+            if is_predict:
+                return nn.SoftMax(self.model(data)[0], dim=1)
+            return self.model(data)[1]
+        else:
+            return self.model(data)
