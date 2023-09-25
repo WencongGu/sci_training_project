@@ -7,6 +7,10 @@ from sklearn.neighbors import NearestNeighbors
 from numpy import genfromtxt
 import numpy as np
 import Data_Part
+from collections import Counter
+from sklearn.datasets import make_classification
+import imblearn
+from imblearn.over_sampling import BorderlineSMOTE
 
 
 class Smote(object):
@@ -155,16 +159,38 @@ def less_make():
 
 
 if __name__ == '__main__':
-    less_make()
-    samples = pd.read_csv("Data_Smote/Data_Less.csv")
-    samples = np.array(samples)
+    # less_make()
+    # samples = pd.read_csv("Data_Smote/Data_Less.csv")
+    # samples = np.array(samples)
+    samples = pd.read_csv(data_set.File_Name)
     # print(samples)
     # N值决定负样本将会扩充至原样本的多少，如下N = 325代表将会扩充原来的325%负样本数量，但是实际上因为向下取整只会扩增至300%
-    smote = Smote(N=325)
-    synthetic_points = smote.fit(samples)
+    #
+    # y是标签
+    with open(data_set.File_Name, encoding="utf-8", errors="ignore") as f:
+        data = csv.DictReader(_.replace("\x00", "") for _ in f)
+        y = []
+        for row in data:
+            if row['Class'] == '1':
+                y.append(1)
+            else:
+                y.append(0)
+
+    # x_res就是完成BodelineSMOTE后完整的数据集
+    print('Original dataset shape %s' % Counter(y))
+    sm = BorderlineSMOTE(random_state=42, kind="borderline-1")
+    x_res, y_res = sm.fit_resample(samples, y)
+    print('Resampled dataset shape %s' % Counter(y_res))
+    name = ['V1', 'V2', 'V3', 'V4', 'V5', 'V6', 'V7', 'V8', 'V9', 'V10', 'V11', 'V12', 'V13', 'V14', 'V15'
+        , 'V16', 'V17', 'V18', 'V19', 'V20', 'V21', 'V22', 'V23', 'V24', 'V25', 'V26', 'V27', 'V28', 'Amount',
+            'Class']
+    test = pd.DataFrame(columns=name, data=x_res)
+    test.to_csv(data_set.File_Smote, index=False)
+    # np.savetxt(data_set.File_Smote, x_res, delimiter=",")
+    # smote = Smote(N=325)
+    # synthetic_points = smote.fit(samples)
     # print(synthetic_points)
-    np.savetxt(data_set.File_Smote, synthetic_points, delimiter=",")
     # 之后可以将该文件和原文件进行合并（Data_Part 有merge函数可以使用）目前暂时有问题，使用.bat文件进行暂时处理
     # Data_Part.PyCSV().merge_csv(save_name='train.csv', file_dir="Train")
-    data = pd.read_csv('Train/creditcard1_train.csv', sep='，')
-    data.info()
+    # data = pd.read_csv('Train/creditcard1_train.csv', sep='，')
+    # data.info()
