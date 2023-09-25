@@ -31,6 +31,7 @@ class NetResDeep(nn.Module):
                 *(n_blocks * [ResBlock(n_chans=n_chans1)]))
         self.fc1 = nn.Linear(n_features * self.n_chans1, 32)
         self.fc2 = nn.Linear(32, n_out)
+        self.fc3 = nn.Linear(n_out, 2)
 
     def forward(self, x):
         out = torch.relu(self.conv1(x))
@@ -38,7 +39,9 @@ class NetResDeep(nn.Module):
         out = out.view(-1, n_features * self.n_chans1)
         out = torch.relu(self.fc1(out))
         out = self.fc2(out)
-        return out
+        feature = out.detach()
+        out = self.fc3(out)
+        return out, feature
 
 
 model_cnn = NetResDeep()
