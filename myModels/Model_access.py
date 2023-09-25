@@ -102,7 +102,7 @@ class ModelAccess:
 
     def __call__(self, dataset, is_predict=False) -> Any:
         data = dataset.data
-        if self.pattern == 'CNN':
+        if self.pattern == 'cnn':
             if is_predict:
                 return nn.SoftMax(self.model(data)[0], dim=1)
             return self.model(data)[1]
