@@ -11,7 +11,7 @@ rand_dim: int = 1  # 随机数维度
 rand_chanel: int = 20  # 随机数通道数
 n = 8  # 生成的样本数，可指定
 z_shape = [n, rand_chanel, rand_dim]
-cnn_out: int = 10  # ！！！cnn模型输出的特征数，尽量设置为偶数。
+cnn_out: int = 16  # ！！！cnn模型输出的特征数，尽量设置为偶数。
 
 device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
 

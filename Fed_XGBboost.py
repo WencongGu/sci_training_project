@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 import sympy
 import time
+from numba import jit
 
 # class FED_XGB:
 #     def __init__(self, base_score=0.5, max_depth=3, n_estimators=10, learning_rate=0.1, reg_lambda=1.,
@@ -710,7 +711,7 @@ from xgboost import Booster
 
 
 class FED_XGB:
-    def __init__(self, base_score=0.4, max_depth=3, n_estimators=10, learning_rate=0.1, reg_lambda=1.,
+    def __init__(self, base_score=0.5, max_depth=3, n_estimators=10, learning_rate=0.1, reg_lambda=-1,
                  gamma=0., min_child_sample=10, min_child_weight=0.001, objective='linear'):
         self.base_score = base_score  # 最开始时给叶子节点权重所赋的值，默认0.5，迭代次数够多的话，结果对这个初值不敏感
         self.max_depth = max_depth  # 最大数深度，3
@@ -722,15 +723,15 @@ class FED_XGB:
         self.min_child_weight = min_child_weight  # 每个叶子节点的Hessian矩阵和，下面代码会细讲
         self.objective = objective  # 目标函数
         self.tree_structure = {}  # 用一个字典来存储每一颗树的树结构
-        # self.epsilon = 0.00001  # 树生长最小增益
         self.epsilon = 0.00001  # 树生长最小增益
         self.loss = lambda y, y_hat: (y - y_hat) ** 2. / 2.  # 损失函数
         self.dependence = 0.3  # 客户端依赖系数（自己发明的）
         self.epsilon0 = 0.993  # 主成分分析贡献率
-        self.m = 10  # 训练集特征个数
+        self.m = 28  # 训练集特征个数
         self.k = 0  # 主成分个数
         self.mat = None  # 主成分分析中线性变换的矩阵的前k列
 
+    # @jit
     def xgb_cart_tree(self, X, w, depth=0):
         """
         递归构造XCart树
@@ -774,6 +775,7 @@ class FED_XGB:
             tree[(best_var, best_cut)][('right', w_right)] = self.xgb_cart_tree(X.loc[id_right], w, depth + 1)  # 递归右子树
         return tree
 
+    # @jit
     def xgb_cart_tree_server(self, X, w, depth=0):
         """
         递归构造XCart树（并行化版本）
@@ -806,12 +808,12 @@ class FED_XGB:
                     gain = G_left ** 2 / (H_left + self.reg_lambda) + G_right ** 2 / (H_right + self.reg_lambda)
                     gain = gain - (G_left + G_right) ** 2 / (H_left + H_right + self.reg_lambda)
                     gain = gain / 2 - self.gamma
-                    gain = 0 - gain
-                    if abs(gain) > abs(max_gain):
+                    # gain = 0 - gain
+                    if gain > max_gain:
                         best_var, best_cut = item, cut
                         max_gain = gain
                         G_left_best, G_right_best, H_left_best, H_right_best = G_left, G_right, H_left, H_right
-        if best_var is None or abs(max_gain) <= self.epsilon:
+        if best_var is None or max_gain <= self.epsilon:
             return None
         else:
             # 给每个叶子节点上的样本分别赋上相应的权重值
@@ -835,6 +837,7 @@ class FED_XGB:
                                                                                        depth + 1)  # 递归右子树
         return tree
 
+    # @jit
     def _grad(self, y_hat, Y):
         """
         计算目标函数的一阶导
@@ -848,6 +851,7 @@ class FED_XGB:
         else:
             raise KeyError('temporarily: use linear or logistic')
 
+    @jit
     def _hess(self, y_hat, Y):
         """
         计算目标函数的二阶导
@@ -861,6 +865,7 @@ class FED_XGB:
         else:
             raise KeyError('temporarily: use linear or logistic')
 
+    # @jit
     def fit_server(self, X, Y):
         """
         根据训练数据集X和标签集Y训练出树结构和权重(并行化版本)
@@ -910,6 +915,7 @@ class FED_XGB:
         print(self.tree_structure)
         return self.tree_structure
 
+    # @jit
     def fit(self, X, Y):
         """
         根据训练数据集X和标签集Y训练出树结构和权重
@@ -944,6 +950,7 @@ class FED_XGB:
         print(self.tree_structure)
         return [y_hat, X['g'], X['h']]
 
+    # @jit
     def _get_tree_node_w(self, X, tree, w):
         """
         递归解构树结构，更新w为节点值
@@ -966,6 +973,7 @@ class FED_XGB:
             self._get_tree_node_w(X_right, tree_right, w)
         return
 
+    # @jit
     def predict_raw(self, X):
         """
         根据训练结果预测返回原始预测值。迭代后y_t为前n-1棵树的y_hat，加和后返回n棵树的y_hat，Y
@@ -979,12 +987,13 @@ class FED_XGB:
             Y = Y + self.rate * y_t
         return Y
 
+    # @jit
     def predict_prob(self, X: pd.DataFrame):
         """
         当指定objective为logistic时，输出概率要做一个logistic转换
         """
         Y = self.predict_raw(X)
-        Y = Y.apply(lambda x: 1 / (1 + np.exp(-x)))
+        # Y = Y.apply(lambda x: 1 / (1 + np.exp(-x)))
         return np.array(Y > 0.5, dtype='int')
 
     def pca(self, data0):

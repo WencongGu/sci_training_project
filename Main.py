@@ -177,10 +177,10 @@ if __name__ == '__main__':
     gi_single_len = INT_MAX
     hi_single_len = INT_MAX
     for i in range(users):
-        # client_file = 'Part_Data/Data_Train_' + str(i + 1) + '.csv'  # 不加cnn
-        client_file_cnn = 'myModels/data_transformed/tensor_' + str(i + 1) + '.csv'
+        client_file = 'Part_Data/Data_Train_' + str(i + 1) + '.csv'  # 不加cnn
+        # client_file_cnn = 'myModels/data_transformed/tensor_' + str(i + 1) + '.csv'
+        df = pd.read_csv(client_file)
         # df = pd.read_csv(client_file)
-        df = pd.read_csv(client_file_cnn)
         X_train = df[df.columns[:-1].tolist()]
         Y_train = df[df.columns[-1]]
         # if X_train.shape[0] != Y_train.shape[0]:

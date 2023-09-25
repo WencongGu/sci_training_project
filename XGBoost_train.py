@@ -53,7 +53,8 @@ def server_train(all_client, all_client_y):
     FML.fit_server(all_client, all_client_y)
     # client_y_hat = client[0]
     # test
-    te = pd.read_csv('Data_Check/Data_Test_cnn.csv')
+    # te = pd.read_csv('Data_Check/Data_Test_cnn.csv')
+    te = pd.read_csv('Data_Check/Data_Test.csv')
     X_test = te[te.columns[:-1].tolist()]
     y_test = te[te.columns[-1]]
     y_pred = FML.predict_raw(X_test)
