@@ -99,6 +99,7 @@ def _hess(objective, y_hat, Y):
 
 
 if __name__ == '__main__':
+    '''
     csv_path_p = data_set.File_Upset
     csv_path = data_set.File_Train
     save_dir = 'Part_Data'
@@ -108,6 +109,7 @@ if __name__ == '__main__':
     T_C_Part.Tc_Part().split_csv(csv_path_p)
     # 将训练集平均分配给各用户机
     Data_Part.PyCSV().split_csv(csv_path, save_dir)
+    '''
 
     # 客户端训练(每个客户端单独建树)
     # users = data_set.num_user
@@ -175,8 +177,10 @@ if __name__ == '__main__':
     gi_single_len = INT_MAX
     hi_single_len = INT_MAX
     for i in range(users):
-        client_file = 'Part_Data/Data_Trian_' + str(i + 1) + '.csv'
+        client_file = 'Part_Data/Data_Train_' + str(i + 1) + '.csv'  # 不加cnn
+        # client_file_cnn = 'myModels/data_transformed/tensor_' + str(i + 1) + '.csv'
         df = pd.read_csv(client_file)
+        # df = pd.read_csv(client_file)
         X_train = df[df.columns[:-1].tolist()]
         Y_train = df[df.columns[-1]]
         # if X_train.shape[0] != Y_train.shape[0]:

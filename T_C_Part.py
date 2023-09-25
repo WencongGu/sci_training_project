@@ -36,7 +36,7 @@ class Tc_Part:
                 # 统计数据总行数
                 self.line_numbers += df.shape[0]
                 # 设置切分后文件的保存路径
-                if(i == 1):
+                if (i == 1):
                     save_filename = os.path.join(data_set.File_Train)
                 else:
                     save_filename = os.path.join(data_set.File_Check)

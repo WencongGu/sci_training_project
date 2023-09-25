@@ -12,7 +12,7 @@ File_Smote = 'Borderline_Smote/Data_Smote.csv'
 # 打乱顺序后的文件路径
 File_Upset = 'Part_Data/Data_Upset.csv'
 # 分割后训练集路径
-File_Train = 'Part_Data/Data_Trian.csv'
+File_Train = 'Part_Data/Data_Train.csv'
 # 分割后测试集路径
 File_Check = 'Data_Check/Data_Test.csv'
 # 训练集比例
