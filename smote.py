@@ -151,7 +151,7 @@ def less_make():
         use = int(list[i])
         output_file = data.loc[use:use]
         save = 'Data_Smote/smote' + str(i) + '.csv'
-        output_file.to_csv(save, mode="a", encoding="utf-8", index=False)
+        output_file.to_csv(save, mode="w", encoding="utf-8", index=False)
     # 抽取出所有的负样本合并为Data_Less.csv
     Data_Part.PyCSV().merge_csv(save_name=data_set.File_Less, file_dir="Data_Smote")
 
@@ -162,7 +162,7 @@ if __name__ == '__main__':
     samples = np.array(samples)
     # print(samples)
     # N值决定负样本将会扩充至原样本的多少，如下N = 325代表将会扩充原来的325%负样本数量，但是实际上因为向下取整只会扩增至300%
-    smote = Smote(N=325)
+    smote = Smote(N=1000)
     synthetic_points = smote.fit(samples)
     # print(synthetic_points)
     np.savetxt(data_set.File_Smote, synthetic_points, delimiter=",")

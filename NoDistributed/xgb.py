@@ -7,15 +7,16 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix, classification_report, accuracy_score, roc_auc_score, roc_curve
 import numpy as np
 
-# client_file = '../Part_Data/Data_Train.csv'  # 不加cnn
-client_file = '../myModels/data_transformed/tensor_all.csv'  # 加cnn
-# client_file_cnn = 'myModels/data_transformed/tensor_' + str(i + 1) + '.csv'
+client_file = '../Part_Data/Data_Train.csv'  # 不加cnn
+# client_file = '../myModels/data_transformed/tensor_all.csv'  # 加cnn，tensor_all就是Data_Train经过cnn得到的
 df = pd.read_csv(client_file)
 # df = pd.read_csv(client_file)
 X_train = df[df.columns[:-1].tolist()]
 y_train = df[df.columns[-1]]
-# te = pd.read_csv('../Data_Check/Data_Test.csv')  # 不加cnn
-te = pd.read_csv('../Data_Check/Data_test_cnn.csv')  # 加cnn
+te = pd.read_csv('../Data_Check/Data_Test.csv')  # 不加cnn
+te = te[~te.apply(lambda x: x.astype(str).str.contains('\x1a')).any(axis=1)]  # 不加cnn
+# te = pd.read_csv('../Data_Check/Data_test_cnn.csv')  # 加cnn，该csv是Data_Test经过cnn得到的
+# 下面不用动了
 X_test = te[te.columns[:-1].tolist()]
 y_test = te[te.columns[-1]]
 label_mapping = {0: 'V1', 1: 'V2', 2: 'V3', 3: 'V4', 4: 'V5', 5: 'V6', 6: 'V7', 7: 'V8',
